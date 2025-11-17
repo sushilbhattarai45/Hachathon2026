@@ -1,14 +1,91 @@
-import React from 'react';
-import {  View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { User } from 'lucide-react-native';
 import { router } from 'expo-router';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
+import axios from 'axios';
+
+const redirectUri = AuthSession.makeRedirectUri({
+  scheme: 'exp',
+});
+console.log('Redirect URI:', redirectUri);
+
+const discovery = {
+  authorizationEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+  tokenEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+};
 
 export default function LoginScreen() {
-  const onContinueWithOutlook = () => {
+  const [loading, setLoading] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  let azureClientId=process.env.EXPO_PUBLIC_AZURE_CLIENT_ID;
+  if (!azureClientId) {
+    console.error('EXPO_PUBLIC_AZURE_CLIENT_ID is not defined in environment variables.');
+  }
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
+      scopes: ['openid', 'profile', 'email', 'offline_access'],
+      redirectUri,
+    },
+    discovery
+  );
 
-    // UI-only placeholder (no OAuth)
-router.push('/screens/homeScreen');  };
+ 
+  const fetchToken = async (code: any) => {
+    const body = new URLSearchParams({
+      client_id: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
+      scope: 'openid profile User.Read Mail.Read',
+      code: code,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+      code_verifier: request?.codeVerifier || '',
+    }).toString();
+
+    try {
+      const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+
+      const data = await res.json();
+      console.log('Token response:', data);
+      setAccessToken(data.access_token);
+    } catch (err) {
+      console.error('Token exchange error:', err);
+    }
+  };
+
+  React.useEffect(() => {
+    console.log("hi"+process.env.EXPO_PUBLIC_AZURE_CLIENT_ID);
+    if(!accessToken)
+    {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+      console.log('Authorization code received:', code);
+      fetchToken(code);
+      setLoading(false);
+    } else if (response?.type === 'error') {
+      console.log('Auth error:', response.params.error);
+      setLoading(false);
+    }
+  }
+  }, [response, request?.codeVerifier]);
+
+  const onContinueWithOutlook = async () => {
+    setLoading(true);
+    try {
+      await promptAsync();
+    } catch (error) {
+      console.log('Login error', error);
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.safe}>
