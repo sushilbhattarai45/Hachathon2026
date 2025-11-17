@@ -6,7 +6,4 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   engine: "classic",
-  datasource: {
-    url: "mongodb+srv://root:root@maincluster.23qmkuk.mongodb.net/?appName=MainCluster"
-  },
 });
