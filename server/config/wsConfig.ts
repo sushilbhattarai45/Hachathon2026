@@ -1,8 +1,10 @@
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
+import { subscribeMail } from "../controllers/mail/subscribe.js";
 
 export interface AuthentiCatedWebSocket extends WebSocket{
     userId?: string;
+    token?: string;
 }
 
 
@@ -18,8 +20,6 @@ const wss = new WebSocketServer({server})
 
 wss.on("connection", (ws:AuthentiCatedWebSocket)=>{
     console.log("connected")
-    console.log(ws.userId)
-
     ws.on("message",async (msg:string)=>{
   
   try {
@@ -28,11 +28,16 @@ wss.on("connection", (ws:AuthentiCatedWebSocket)=>{
     if( data.userId !=null)
     {
         ws.userId = data.userId
+        ws.token = data.token
         userConnections.set(
-        data.userId,ws
-        )
-          console.log(`User ${data.userId} authenticated & connected`);
+        data.userId, ws)
+
+        
+        console.log(`User ${data.userId} authenticated & connected`);
+if (ws.token && ws.userId)
+     subscribeMail(ws.userId, ws.token)
     }
+    
   }
  catch (err) {
         console.log("Invalid WS message", err);
@@ -48,3 +53,5 @@ wss.on("connection", (ws:AuthentiCatedWebSocket)=>{
 })
 
 }
+
+

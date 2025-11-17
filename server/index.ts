@@ -4,7 +4,7 @@ import { subscribeMail } from './controllers/mail/subscribe.js';
 import MailRouter from './routers/mailRouter.js';
 import WebSocket from 'ws';
 const app = express();
-const PORT = 6000;
+const PORT = 8000;
 import { stratWebSocketConnections } from './config/wsConfig.js';
 app.use(express.json());
 const server =app.listen(PORT, () => {
@@ -51,5 +51,5 @@ const randomlySelectUserandSendData =()=>{
   for (let i = 0; i < 100; i++) {
     setTimeout(() => {
       randomlySelectUserandSendData();
-    }, i * 2000);
+    }, i * 10000);
   }
