@@ -4,14 +4,17 @@ import { User } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
 
 WebBrowser.maybeCompleteAuthSession();
-import axios from 'axios';
+import { getNewAccessToken } from '@/components/getNewToken';
 
 const redirectUri = AuthSession.makeRedirectUri({
   scheme: 'exp',
 });
-console.log('Redirect URI:', redirectUri);
+  console.log('Redirect URI:', redirectUri);
+
 
 const discovery = {
   authorizationEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
@@ -34,6 +37,7 @@ export default function LoginScreen() {
     },
     discovery
   );
+  
 
  
   const fetchToken = async (code: any) => {
@@ -55,12 +59,43 @@ export default function LoginScreen() {
 
       const data = await res.json();
       console.log('Token response:', data);
+     
       setAccessToken(data.access_token);
+      storeTokens(data);
     } catch (err) {
       console.error('Token exchange error:', err);
     }
   };
 
+const  checkTokens = async () => {
+    const accessToken = await SecureStore.getItemAsync('accessToken');
+    const tokenExpiration = await SecureStore.getItemAsync('tokenExpiration');
+    if (accessToken && tokenExpiration) {
+      const expirationTime = parseInt(tokenExpiration, 10);
+      if (Date.now() < expirationTime) {
+       console.log("Token is valid, navigating to home screen");
+        router.push('/screens/homeScreen');
+      }
+      else {
+        console.log("Token expired, please log in again.");
+     const token =  await getNewAccessToken()
+if (token!==null){
+  // router.push('/screens/homeScreen');
+}
+
+      }
+    }
+  };
+useEffect(() => {
+  checkTokens();
+}, []);
+ const storeTokens = async (data: any) => {
+  const expirationTime = Date.now() + data.expires_in * 1000; // ms timestamp
+  await SecureStore.setItemAsync('accessToken', data.access_token);
+  await SecureStore.setItemAsync('refreshToken', data.refresh_token);
+  await SecureStore.setItemAsync('tokenExpiration', expirationTime.toString());
+
+};
   React.useEffect(() => {
     console.log("hi"+process.env.EXPO_PUBLIC_AZURE_CLIENT_ID);
     if(!accessToken)

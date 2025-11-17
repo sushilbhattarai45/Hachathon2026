@@ -23,7 +23,7 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 
 const WSConn = () => {
 
-const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev/');
+const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev');
 ws.onerror = (error) => console.error(error);
 
 ws.onopen = () => {
