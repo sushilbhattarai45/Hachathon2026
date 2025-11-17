@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text,Dimensions, StyleSheet, FlatList, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-
+import * as SecureStorage from 'expo-secure-store';
+import { router } from 'expo-router';
 export default function HomeScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const scrollViewRef = useRef<ScrollView>(null);
   const [dates, setDates] = useState<Date[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [ token, setToken] = useState<string | null>(null);
 const ITEM_WIDTH = 52; 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-
+const [accessToken, setAccessToken] = useState<string | null>(null);
   useEffect(() => {
     const today = new Date();
     const newDates = [];
@@ -19,22 +22,40 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
     setDates(newDates);
     WSConn();
   }, []);
+  useEffect(() => {
+    getTokens()
+    }, []);
 
+  let getTokens= async()=>{
+    let mail = await SecureStorage.getItemAsync('userEmail');
+let token = await SecureStorage.getItemAsync('accessToken');  
+
+setUserEmail(mail);
+setToken(token);
+
+
+  }
+const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev');
 
 const WSConn = () => {
-
-const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev');
+  
 ws.onerror = (error) => console.error(error);
 
-ws.onopen = () => {
+ws.onopen =async () => {
+    let userEmail = await SecureStorage.getItemAsync('userEmail');
+    let token = await SecureStorage.getItemAsync('accessToken');
+    console.log("WebSocket connected");
   ws.send(JSON.stringify({
-    "userId": "user123"
+    "userId": userEmail,
+    'token': token
   }));
+  console.log('WebSocket connection opened');
 };
 
 ws.onmessage = (event) => {
   console.log('received: %s', event.data);
 };
+
 };
 
   // Separate effect to scroll after dates are set
@@ -149,7 +170,13 @@ ws.onmessage = (event) => {
             return (
               <TouchableOpacity
                 key={idx}
-                onPress={() => {
+                onPress={async() => {
+
+                    alert("logour")
+                await SecureStorage.deleteItemAsync('accessToken');
+                await SecureStorage.deleteItemAsync('refreshToken');
+                ws.close();
+                router.push('/');
                   setSelectedDate(date);
                   scrollToDate(date);
                 }}

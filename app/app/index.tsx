@@ -21,6 +21,9 @@ const discovery = {
   tokenEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
 };
 
+
+
+
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -38,6 +41,27 @@ export default function LoginScreen() {
     discovery
   );
   
+
+  const getEmail= async()=>
+    {
+      try{
+const token = await SecureStore.getItemAsync('accessToken');
+if (!token) {
+  throw new Error("No access token found");
+}
+
+
+const response = await axios.post("https://keith-unvenereal-aniyah.ngrok-free.dev/mail/getEmail",{
+  accessToken: token
+})
+console.log(response.data);
+let mail =response.data.email;
+await SecureStore.setItemAsync('userEmail', mail);
+      }
+      catch (error) {
+        console.error('Error fetching email:', error);
+      }
+    }
 
  
   const fetchToken = async (code: any) => {
@@ -59,9 +83,10 @@ export default function LoginScreen() {
 
       const data = await res.json();
       console.log('Token response:', data);
-     
       setAccessToken(data.access_token);
       storeTokens(data);
+
+      router.push('/screens/homeScreen');
     } catch (err) {
       console.error('Token exchange error:', err);
     }
@@ -74,6 +99,7 @@ const  checkTokens = async () => {
       const expirationTime = parseInt(tokenExpiration, 10);
       if (Date.now() < expirationTime) {
        console.log("Token is valid, navigating to home screen");
+       getEmail();
         router.push('/screens/homeScreen');
       }
       else {
@@ -86,15 +112,19 @@ if (token!==null){
       }
     }
   };
+
 useEffect(() => {
   checkTokens();
 }, []);
+
+
+
  const storeTokens = async (data: any) => {
   const expirationTime = Date.now() + data.expires_in * 1000; // ms timestamp
   await SecureStore.setItemAsync('accessToken', data.access_token);
   await SecureStore.setItemAsync('refreshToken', data.refresh_token);
   await SecureStore.setItemAsync('tokenExpiration', expirationTime.toString());
-
+return
 };
   React.useEffect(() => {
     console.log("hi"+process.env.EXPO_PUBLIC_AZURE_CLIENT_ID);

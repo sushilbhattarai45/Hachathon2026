@@ -60,7 +60,7 @@ export const webhookHandler = async (req: Request, res: Response) => {
         const messageId = resource.split("/").pop();
 
         if (processedMessages.has(messageId)) {
-          console.log("⏩ Skipping duplicate notification for:");
+          console.log(" Skipping duplicate notification for:");
           continue;
         }
         let userSocket = userConnections.get(n.subscriptionId);
