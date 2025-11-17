@@ -12,6 +12,8 @@ export const userConnections= new Map<string , AuthentiCatedWebSocket>()
 
 export const stratWebSocketConnections=async(server:any)=>{
 
+  console.log("Starting WebSocket server...");
+
 const wss = new WebSocketServer({server})
 
 wss.on("connection", (ws:AuthentiCatedWebSocket)=>{

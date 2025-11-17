@@ -92,3 +92,38 @@ export const webhookHandler = async (req: Request, res: Response) => {
   }
 };
 
+
+export const getEmail = async (req: Request, res: Response) => 
+  {
+  
+let token = req.body.accessToken;
+console.log("request reached here")
+console.log(token)
+  if (!token) {
+    return res.status(400).json({ error: "Access token is required" });
+  }
+  try {
+ const response = await fetch(
+      "https://graph.microsoft.com/v1.0/me",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+const data = await response.json();
+   console.log(data.mail)
+  res.status(200).json({
+    email: data.mail
+  });
+  }
+  catch(err)
+{
+  res.send(err)
+}
+
+
+
+}

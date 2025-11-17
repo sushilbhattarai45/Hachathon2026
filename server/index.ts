@@ -1,12 +1,10 @@
-console.log ('hii');
 import { subscribe } from 'diagnostics_channel';
 import express from 'express';
 import { subscribeMail } from './controllers/mail/subscribe.js';
 import MailRouter from './routers/mailRouter.js';
 import WebSocket from 'ws';
 const app = express();
-const PORT = 5000;
-import { WebSocketServer } from 'ws';
+const PORT = 6000;
 import { stratWebSocketConnections } from './config/wsConfig.js';
 app.use(express.json());
 const server =app.listen(PORT, () => {
@@ -16,6 +14,11 @@ const server =app.listen(PORT, () => {
 
 
 app.use('/mail', MailRouter);
+
+app.get('/hi', (req, res) => {
+  res.send('Hello from the server!');
+}
+)
 
 stratWebSocketConnections(server);
 
