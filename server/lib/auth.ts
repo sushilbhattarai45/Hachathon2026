@@ -3,13 +3,13 @@ import "dotenv/config";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { expo as betterAuthExpo, expo } from "@better-auth/expo";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "@prisma/client/extension";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 const config: BetterAuthOptions = {
   secret: process.env.BETTER_AUTH_SECRET!,
-  database: prismaAdapter(prisma, { provider: "sqlite" }),
+  database: prismaAdapter(prisma, { provider: "mongodb" }),
 
   // Ensure your mobile scheme is trusted so deep link callbacks work
   trustedOrigins: [process.env.EXPO_SCHEME ? `${process.env.EXPO_SCHEME}://` : "myapp://"],
