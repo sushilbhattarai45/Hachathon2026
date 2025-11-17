@@ -9,7 +9,6 @@ const ITEM_WIDTH = 52;
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
   useEffect(() => {
-    // Generate 60 days of dates (30 before, 30 after today)
     const today = new Date();
     const newDates = [];
     for (let i = -30; i <= 30; i++) {
@@ -18,10 +17,28 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
       newDates.push(d);
     }
     setDates(newDates);
-
-    // Scroll to today initially
-    setTimeout(() => scrollToDate(today), 300);
   }, []);
+
+  // Separate effect to scroll after dates are set
+  useEffect(() => {
+    if (dates.length === 0) return;
+    
+    const today = new Date();
+    const index = dates.findIndex(
+      (d) => d.toDateString() === today.toDateString()
+    );
+
+    if (index === -1 || !scrollViewRef.current) return;
+
+    setTimeout(() => {
+      // Center today's date in the middle of the screen
+      const xOffset = index * ITEM_WIDTH - (SCREEN_WIDTH / 6 - ITEM_WIDTH / 6);
+      scrollViewRef.current?.scrollTo({
+        x: xOffset,
+        animated: true,
+      });
+    }, 300);
+  }, [dates]);
 
  const scrollToDate = (date: Date) => {
   const index = dates.findIndex(
@@ -30,6 +47,7 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 
   if (index === -1 || !scrollViewRef.current) return;
 
+  // Center the date in the middle of the screen
   const xOffset = index * ITEM_WIDTH - (SCREEN_WIDTH / 6 - ITEM_WIDTH / 6);
 
   scrollViewRef.current.scrollTo({
@@ -45,18 +63,41 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
   const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
   const isSelected = (date: Date) => date.toDateString() === selectedDate.toDateString();
 
-  // Mock items for demo - Diverse student content
-  const mockItems = [
-    { id: '1', type: 'event', title: 'Biology Lecture', time: '9:00 AM', notes: 'Chapter 5: Photosynthesis. Bring lab notebook', icon: '🔬' },
-    { id: '2', type: 'task', title: 'Maths Assignment', time: '2:30 PM', notes: 'Algebra problems 1-20. Due tomorrow', icon: '📐' },
-    { id: '3', type: 'note', title: 'Email from Prof. Smith', time: '10:45 AM', notes: 'Your midterm exam is scheduled for Nov 23. Good luck!', icon: '📧' },
-    { id: '4', type: 'form', title: 'Attendance Form', time: '11:00 AM', notes: 'Mark your attendance for this week\'s sessions', icon: '📋' },
-    { id: '5', type: 'task', title: 'English Essay', time: '3:30 PM', notes: '3 pages min. Topic: "Innovation in Technology"', icon: '📝' },
-    { id: '6', type: 'event', title: 'Physics Lab', time: '4:00 PM', notes: 'Experiment on momentum. Partner: Alex', icon: '⚛️' },
-    { id: '7', type: 'note', title: 'Message from Study Group', time: '5:15 PM', notes: 'Can we meet tomorrow at 2 PM? - Rahul', icon: '💬' },
-    { id: '8', type: 'form', title: 'Internship Application', time: '7:00 PM', notes: 'Complete your profile for summer internship opportunity', icon: '🎯' },
-    { id: '9', type: 'note', title: 'History Project Deadline', time: '11:59 PM', notes: 'Group presentation on World War II next week', icon: '📚' },
-  ];
+  // Events data organized by date
+  const eventsData: { [key: string]: Array<{ id: string; type: string; title: string; time: string; notes: string; icon: string }> } = {
+    '2025-11-16': [ // Today
+      { id: '1', type: 'event', title: 'Biology Lecture', time: '9:00 AM', notes: 'Chapter 5: Photosynthesis. Bring lab notebook', icon: '🔬' },
+      { id: '2', type: 'task', title: 'Maths Assignment', time: '2:30 PM', notes: 'Algebra problems 1-20. Due tomorrow', icon: '📐' },
+      { id: '3', type: 'note', title: 'Email from Prof. Smith', time: '10:45 AM', notes: 'Your midterm exam is scheduled for Nov 23. Good luck!', icon: '📧' },
+      { id: '4', type: 'form', title: 'Attendance Form', time: '11:00 AM', notes: 'Mark your attendance for this week\'s sessions', icon: '📋' },
+    ],
+    '2025-11-17': [ // Tomorrow
+      { id: '5', type: 'task', title: 'English Essay', time: '3:30 PM', notes: '3 pages min. Topic: "Innovation in Technology"', icon: '📝' },
+      { id: '6', type: 'event', title: 'Physics Lab', time: '4:00 PM', notes: 'Experiment on momentum. Partner: Alex', icon: '⚛️' },
+      { id: '7', type: 'note', title: 'Message from Study Group', time: '5:15 PM', notes: 'Can we meet tomorrow at 2 PM? - Rahul', icon: '💬' },
+    ],
+    '2025-11-18': [
+      { id: '8', type: 'form', title: 'Internship Application', time: '7:00 PM', notes: 'Complete your profile for summer internship opportunity', icon: '🎯' },
+      { id: '9', type: 'note', title: 'History Project Deadline', time: '11:59 PM', notes: 'Group presentation on World War II next week', icon: '📚' },
+      { id: '10', type: 'task', title: 'Chemistry Lab Report', time: '2:00 PM', notes: 'Submit experiment observations and analysis', icon: '🧪' },
+    ],
+    '2025-11-19': [
+      { id: '11', type: 'event', title: 'Seminar: AI in Education', time: '10:00 AM', notes: 'Special guest speaker from tech industry', icon: '🎤' },
+      { id: '12', type: 'task', title: 'Database Project', time: '5:00 PM', notes: 'Complete schema design and setup', icon: '💾' },
+    ],
+    '2025-11-20': [
+      { id: '13', type: 'note', title: 'Club Meeting', time: '6:00 PM', notes: 'Coding club weekly meetup. Discuss new projects', icon: '👥' },
+      { id: '14', type: 'form', title: 'Mid-semester Feedback', time: '9:00 AM', notes: 'Complete course feedback survey', icon: '📝' },
+    ],
+  };
+
+  // Get events for selected date
+  const getEventsForDate = (date: Date) => {
+    const dateKey = date.toISOString().split('T')[0];
+    return eventsData[dateKey] || [];
+  };
+
+  const mockItems = getEventsForDate(selectedDate);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -211,28 +252,34 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: {  backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   navButton: { padding: 8 },
   navText: { fontSize: 18, color: '#0f172a' },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#0f172a' },
-  calendarScroll: { backgroundColor: 'white', paddingVertical: 6 },
-  calendarContent: { paddingHorizontal: 8 },
+  calendarScroll: { 
+    
+    paddingVertical: 6 },
+  calendarContent: { paddingHorizontal: 8,
+    height: 80
+ },
  dateItem: {
   width: 52,
   alignItems: 'center',
-  paddingVertical: 6,
-  paddingHorizontal: 6,
+  paddingVertical: 8,
+  paddingHorizontal:8,
   marginHorizontal: 2,
   marginBottom: 16,
+  
   justifyContent: 'center',
   borderRadius: 8,
   height: 64,
@@ -262,6 +309,7 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -287,7 +335,6 @@ const styles = StyleSheet.create({
   actionTextActive: { color: '#fff' },
   // Events Section Styles
   eventsHeaderContainer: { paddingHorizontal: 16,
-
     
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   eventsHeaderText: { fontSize: 16, fontWeight: '600', color: '#0f172a' },
