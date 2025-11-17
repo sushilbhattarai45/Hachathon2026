@@ -17,7 +17,25 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
       newDates.push(d);
     }
     setDates(newDates);
+    WSConn();
   }, []);
+
+
+const WSConn = () => {
+
+const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev/');
+ws.onerror = (error) => console.error(error);
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    "userId": "user123"
+  }));
+};
+
+ws.onmessage = (event) => {
+  console.log('received: %s', event.data);
+};
+};
 
   // Separate effect to scroll after dates are set
   useEffect(() => {
