@@ -494,7 +494,7 @@ const handleActionSubmit = async () => {
       styles.eventActionTextSmallActive,
     ]}
   >
-    {action.type}
+    {action.type === "create_task" ? "Create Task" : "Create Calendar Event"}
   </Text>
 </TouchableOpacity>
 
@@ -768,7 +768,7 @@ const handleActionSubmit = async () => {
               
               alert("API Response:"+ JSON.stringify(response.data));
 
-              
+
               alert("Reminder created successfully!");
               setModalVisible(false);
               setCurrentPayload({});
