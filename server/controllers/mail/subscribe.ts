@@ -140,6 +140,7 @@ export const webhookHandler = async (req: Request, res: Response) => {
     if (!userConnections.has(subscriptionId)) continue;
     const { token, ws } = userConnections.get(subscriptionId)!;
 
+<<<<<<< HEAD
     // Fetch the email message from Graph
     const response = await fetch(
       `https://graph.microsoft.com/v1.0/me/messages/${messageId}`,
@@ -147,6 +148,16 @@ export const webhookHandler = async (req: Request, res: Response) => {
     );
     const message = await response.json();
     processedMessages.add(messageId);
+=======
+    // Fetch the email message from Graph
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/me/messages/${messageId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const message = await response.json();
+    processedMessages.add(messageId);
+    console.log("Fetched message:",  JSON.stringify(message, null, 2));
+>>>>>>> 8735ba99c0fdcf64441e022f41667088ee978f36
 
     const emailData = {
       subject: message.subject,
@@ -162,15 +173,16 @@ export const webhookHandler = async (req: Request, res: Response) => {
     // Send updated thread to WebSocket
     // ws.send(JSON.stringify({ thread: mailThreads.get(subscriptionId) }));
 
-    // Calculate tasks once per subscription
-    if (!tasksCalculated.has(messageId)) {
-      try{
-const tasks = await getTasks([emailData]);
-      // console.log(tasks.output, emailData)
-      let res = await sendTaskToDB(tasks?.output,emailData)
-      // console.log("res", res)
-       ws.send( JSON.stringify(res));
-    tasksCalculated.add(messageId); 
+    // Calculate tasks once per subscription
+    if (!tasksCalculated.has(messageId)) {
+      try{
+
+const tasks = await getTasks(message);
+      // console.log(tasks.output, emailData)
+      let res = await sendTaskToDB(tasks?.output,emailData)
+      // console.log("res", res)
+       ws.send( JSON.stringify(res));
+    tasksCalculated.add(messageId);
 
 
       }
