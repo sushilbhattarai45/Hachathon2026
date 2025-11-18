@@ -1,36 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import {  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { User } from 'lucide-react-native';
-import { router } from 'expo-router';
+import React, {useEffect, useState} from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
+import {User} from 'lucide-react-native';
+import {router} from 'expo-router';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 
 WebBrowser.maybeCompleteAuthSession();
-import { getNewAccessToken } from '@/components/getNewToken';
+import {getNewAccessToken} from '@/components/getNewToken';
 
 const redirectUri = AuthSession.makeRedirectUri({
   scheme: 'exp',
 });
-  console.log('Redirect URI:', redirectUri);
-
+console.log('Redirect URI:', redirectUri);
 
 const discovery = {
-  authorizationEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+  authorizationEndpoint:
+    'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
   tokenEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
 };
-
-
-
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  let azureClientId=process.env.EXPO_PUBLIC_AZURE_CLIENT_ID;
+  let azureClientId = process.env.EXPO_PUBLIC_AZURE_CLIENT_ID;
   if (!azureClientId) {
-    console.error('EXPO_PUBLIC_AZURE_CLIENT_ID is not defined in environment variables.');
+    console.error(
+      'EXPO_PUBLIC_AZURE_CLIENT_ID is not defined in environment variables.'
+    );
   }
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -40,30 +45,32 @@ export default function LoginScreen() {
     },
     discovery
   );
-  
 
-  const getEmail= async()=>
-    {
-      try{
-const token = await SecureStore.getItemAsync('accessToken');
-if (!token) {
-  throw new Error("No access token found");
-}
+  const getEmail = async (accessToken?: string) => {
+    try {
+      let token;
+      if (!accessToken) token = await SecureStore.getItemAsync('accessToken');
+      else token = accessToken;
 
+      console.log('hahahah');
+      console.log(token);
+      console.log('hahahah');
 
-const response = await axios.post("https://keith-unvenereal-aniyah.ngrok-free.dev/mail/getEmail",{
-  accessToken: token
-})
-console.log(response.data);
-let mail =response.data.email;
-await SecureStore.setItemAsync('userEmail', mail);
-      }
-      catch (error) {
-        console.error('Error fetching email:', error);
-      }
+      const response = await axios.post(
+        'https://keith-unvenereal-aniyah.ngrok-free.dev/mail/getEmail',
+        {
+          accessToken: token,
+        }
+      );
+      console.log(response.data);
+      let mail = response.data.email;
+      await SecureStore.setItemAsync('userEmail', mail);
+      return mail;
+    } catch (error) {
+      console.error('Error fetching email:', error);
     }
+  };
 
- 
   const fetchToken = async (code: any) => {
     const body = new URLSearchParams({
       client_id: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
@@ -75,75 +82,112 @@ await SecureStore.setItemAsync('userEmail', mail);
     }).toString();
 
     try {
-      const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body,
-      });
+      const res = await fetch(
+        'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body,
+        }
+      );
 
       const data = await res.json();
       console.log('Token response:', data);
-      alert("Access Token: "+ data.access_token)
       setAccessToken(data.access_token);
       storeTokens(data);
+      if (data.access_token) {
+        getEmail(data.access_token);
+        checkLogin()
 
-      // router.push('/screens/homeScreen');
+      }
+
+        checkLogin()
+
+
+      // router.push("/screens/onBoardingScreen")
     } catch (err) {
       console.error('Token exchange error:', err);
     }
   };
 
-const  checkTokens = async () => {
+  let checkLogin = async () => {
+    getEmail();
+    let email = await SecureStore.getItemAsync('userEmail');
+
+    try{
+let response = await axios.post("https://keith-unvenereal-aniyah.ngrok-free.dev/user/login",{
+  email :'ASAS@gmai.com'
+})
+let wasUser = response.data.wasUser
+if(wasUser === true)
+{
+  router.push("/screens/homeScreen")
+}
+else
+{
+  router.push("/screens/onBoardingScreen")
+}
+
+    }
+    catch(err)
+    {
+      console.log(err)
+    }
+
+
+
+
+  };
+
+  const checkTokens = async () => {
     const accessToken = await SecureStore.getItemAsync('accessToken');
     const tokenExpiration = await SecureStore.getItemAsync('tokenExpiration');
     if (accessToken && tokenExpiration) {
       const expirationTime = parseInt(tokenExpiration, 10);
       if (Date.now() < expirationTime) {
-       console.log("Token is valid, navigating to home screen");
-       getEmail();
-        router.push('/screens/homeScreen');
-      }
-      else {
-        console.log("Token expired, please log in again.");
-     const token =  await getNewAccessToken()
-if (token!==null){
-  // router.push('/screens/homeScreen');
-}
-
+        console.log('Token is valid, navigating to home screen');
+        getEmail();
+        checkLogin()
+        // router.push('/screens/onBoardingScreen');
+      } else {
+        console.log('Token expired, please log in again.');
+        const token = await getNewAccessToken();
+        if (token !== null) {
+          // router.push('/screens/homeScreen');
+        }
       }
     }
   };
 
-useEffect(() => {
-  checkTokens();
-}, []);
+  useEffect(() => {
+    checkTokens();
+  }, []);
 
-
-
- const storeTokens = async (data: any) => {
-  const expirationTime = Date.now() + data.expires_in * 1000; // ms timestamp
-  if (data.refresh_token && data.access_token) {
-  await SecureStore.setItemAsync('accessToken', data.access_token);
-  await SecureStore.setItemAsync('refreshToken', data.refresh_token);
-  await SecureStore.setItemAsync('tokenExpiration', expirationTime.toString());
-
-  }
-return
-};
-  React.useEffect(() => {
-    console.log("hi"+process.env.EXPO_PUBLIC_AZURE_CLIENT_ID);
-    if(!accessToken)
-    {
-    if (response?.type === 'success') {
-      const { code } = response.params;
-      console.log('Authorization code received:', code);
-      fetchToken(code);
-      setLoading(false);
-    } else if (response?.type === 'error') {
-      console.log('Auth error:', response.params.error);
-      setLoading(false);
+  const storeTokens = async (data: any) => {
+    const expirationTime = Date.now() + data.expires_in * 1000; // ms timestamp
+    if (data.refresh_token && data.access_token) {
+      await SecureStore.setItemAsync('accessToken', data.access_token);
+      await SecureStore.setItemAsync('refreshToken', data.refresh_token);
+      await SecureStore.setItemAsync(
+        'tokenExpiration',
+        expirationTime.toString()
+      );
     }
-  }
+    return;
+  };
+  React.useEffect(() => {
+    console.log('hi' + process.env.EXPO_PUBLIC_AZURE_CLIENT_ID);
+    if (!accessToken) {
+      if (response?.type === 'success') {
+        const {code} = response.params;
+        console.log('Authorization code received:', code);
+        fetchToken(code);
+        setLoading(false);
+      } else if (response?.type === 'error') {
+        console.log('Auth error:', response.params.error);
+        setLoading(false);
+      }
+    }
   }, [response, request?.codeVerifier]);
 
   const onContinueWithOutlook = async () => {
@@ -160,26 +204,36 @@ return
     <View style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <User color="red" size={48}  style={{
-            alignContent: 'center',
-            alignSelf: 'center',
-            justifyContent: 'center',
-            marginTop: 20,
-          }}
-            />
-          <Text style={{
-            ...styles.appName,
-            fontFamily: 'System',
-            alignSelf: 'center',
-            marginTop: 40,
-          }}>Hachathon</Text>
-          <Text style={{
-            ...styles.tagline,
-            
-            fontFamily: 'System',
-            alignSelf: 'center',
+          <User
+            color="red"
+            size={48}
+            style={{
+              alignContent: 'center',
+              alignSelf: 'center',
+              justifyContent: 'center',
+              marginTop: 20,
+            }}
+          />
+          <Text
+            style={{
+              ...styles.appName,
+              fontFamily: 'System',
+              alignSelf: 'center',
+              marginTop: 40,
+            }}
+          >
+            Hachathon
+          </Text>
+          <Text
+            style={{
+              ...styles.tagline,
 
-          }}>Smart events, smarter teams</Text>
+              fontFamily: 'System',
+              alignSelf: 'center',
+            }}
+          >
+            Smart events, smarter teams
+          </Text>
         </View>
 
         <View style={styles.center}>
@@ -206,13 +260,13 @@ return
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, padding: 24, justifyContent: 'space-between' },
-  header: { marginTop: 24 },
-  appName: { fontSize: 28, fontWeight: '700', color: '#0f172a' },
-  tagline: { marginTop: 6, color: '#475569', fontSize: 14 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  footer: { paddingBottom: 24 },
+  safe: {flex: 1, backgroundColor: '#fff'},
+  container: {flex: 1, padding: 24, justifyContent: 'space-between'},
+  header: {marginTop: 24},
+  appName: {fontSize: 28, fontWeight: '700', color: '#0f172a'},
+  tagline: {marginTop: 6, color: '#475569', fontSize: 14},
+  center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
+  footer: {paddingBottom: 24},
   outlookButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,9 +287,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  iconText: { color: '#fff', fontWeight: '700' },
-  outlookText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  iconText: {color: '#fff', fontWeight: '700'},
+  outlookText: {color: '#fff', fontSize: 16, fontWeight: '600'},
 });
-
-
-

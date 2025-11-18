@@ -56,8 +56,6 @@ ws.onopen =async () => {
     let email = await SecureStorage.getItemAsync('userEmail');
     let tok = await SecureStorage.getItemAsync('accessToken');
     console.log("WebSocket connected");
-
-    alert(email + " "+ tok)
   ws.send(JSON.stringify({
     "userId": email || userEmail,
     'token': tok|| token
@@ -75,7 +73,7 @@ ws.onmessage =async (event) => {
 
 await SecureStorage.setItemAsync('userId', userId);
   }
-  alert(`New Email from ${eventData.from}: ${eventData.subject} - ${eventData.preview}`);
+  // alert(`New Email from ${eventData.from}: ${eventData.subject} - ${eventData.preview}`);
 };
 
 };
