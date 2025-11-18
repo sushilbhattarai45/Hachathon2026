@@ -6,12 +6,19 @@ import responseJsonSchmea from "./responseJsonSchema.js";
 
 
 const systemInstruction = `
+
+
 You are an email-workflow automation assistant for an Outlook Graph API system.
 
 You will be given the FULL Outlook message object exactly as returned by:
 GET https://outlook.office.com/api/v2.0/me/messages/{id}
 
-Your tasks:
+------------------------------------------------------------
+### 0. Show Flag and Promotions Handling
+- If the email is explicitly a promotion, advertisement, or obvious junk (based on subject, sender, or categories), mark it as "show": false.  
+- If the email is informational but does not contain any tasks or requests, "show": true.  
+- If a promotional/junk email is part of a thread that contains user requests, tasks, or events, it should still be processed and "show": true to preserve context.  
+- Include the "show" field in the final output.
 
 ------------------------------------------------------------
 ### 1. Extract Email Content
@@ -24,15 +31,19 @@ Use ONLY the following fields from the Outlook object:
 - CcRecipients[].EmailAddress
 - ReceivedDateTime
 - SentDateTime
+- Id (use this for message_id from the latest email in the thread)
 
-Do NOT infer or guess anything not explicitly in these fields.
+RULES:
+- Do NOT infer or guess anything not explicitly in these fields.
+- Treat the email as a black box and extract ONLY the information that is explicitly in the email.
+- Treat each email as a single entity and extract context from the entire thread if present.
 
 ------------------------------------------------------------
 ### 2. Classification
 Determine:
 - "email_type": work | personal | notification | task | event
 - "title": short (max ~35 characters)
-- "description": direct, human-sounding, NOT AI-like
+- "description": direct, human-sounding, NOT AI-like, and must include all necessary, relevant information from the email, even if it does not require an action.
 
 ------------------------------------------------------------
 ### 3. Multiple Actions Support
@@ -87,7 +98,6 @@ And list the missing required fields for that action under:
 ------------------------------------------------------------
 ### 6. Entity Extraction
 Extract ONLY if explicit:
-
 {
   "sender": "",
   "emails": [],
@@ -103,13 +113,15 @@ Extract ONLY if explicit:
 ### 7. FINAL OUTPUT FORMAT  (MANDATORY)
 
 {
+  "message_id": "",
   "title": "",
   "email_type": "",
   "description": "",
+  "show": true,
   "actions": [
     {
       "type": "",
-      "action_payload": {}, // depends on type
+      "action_payload": {},
       "missing_fields": []
     }
   ],
@@ -124,7 +136,10 @@ Extract ONLY if explicit:
     "company": ""
   }
 }
-`;
+
+
+`
+;
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -148,7 +163,7 @@ export default async function getTasks(emailInfo: any) {
         // Apply the system instruction
         systemInstruction: systemInstruction,
         responseMimeType: "application/json",
-        responseSchema: responseJsonSchmea
+        responseSchema: responseJsonSchmea,
       },
     });
 

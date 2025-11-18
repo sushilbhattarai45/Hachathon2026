@@ -7,6 +7,14 @@ const jsonSchema = {
       "type": "string",
       "description": "Short title that fits 1–2 lines on mobile."
     },
+    messageId: {
+      type: "string",
+      description: "The message ID of the email"
+      },
+    "show": {
+      type: "boolean",
+      description: "Whether to show the email in the UI based on its content"
+      },
     "email_type": {
       "type": "string",
       "enum": ["work", "personal", "notification", "task", "event"],
