@@ -166,9 +166,9 @@ export const webhookHandler = async (req: Request, res: Response) => {
     if (!tasksCalculated.has(subscriptionId)) {
       try{
 const tasks = await getTasks([emailData]);
-      console.log(tasks.output, emailData)
-      let res = await sendTaskToDB(tasks.output,emailData)
-      console.log("res", res)
+      // console.log(tasks.output, emailData)
+      let res = await sendTaskToDB(tasks?.output,emailData)
+      // console.log("res", res)
        ws.send( JSON.stringify(res));
     tasksCalculated.add(subscriptionId);
 
@@ -217,19 +217,20 @@ const data = await response.json();
 }
 
 export const sendTaskToDB = async (data:any, emailData:any) => {
-  // console.log(JSON.stringify(data))
-  // console.log("HAHAHH")
+  console.log(JSON.stringify(data))
+  console.log("HAHAHH")
+  console.log(data?.description)
   try {
-   console.log({ 
-       message_id: emailData.subject,
-      title: emailData?.subject,
-      email_type: "email",
-      user_email: emailData?.to[0],
-      description: emailData?.preview,
-      show: true,
-      actions: JSON.stringify(data?.actions),
-      entities: JSON.stringify(data?.entities)
-    })
+  //  console.log({ 
+  //      message_id: emailData.subject,
+  //     title: emailData?.subject,
+  //     email_type: "email",
+  //     user_email: emailData?.to[0],
+  //     description: data?.description,
+  //     show: true,
+  //     actions: JSON.stringify(data?.actions),
+  //     entities: JSON.stringify(data?.entities)
+  //   })
 
 
    const response = await new taskSchema({

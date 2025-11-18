@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-import * as JsonSchema from "./responseJsonSchema.json";
+import  {schema} from "./responseJsonSchema.js";
 const systemInstruction = `
 
 
@@ -274,7 +274,7 @@ export default async function getTasks(emailInfo: any) {
         // Apply the system instruction
         systemInstruction: prompt,
         responseMimeType: "application/json",
-        responseSchema: JsonSchema,
+        responseSchema: schema,
       },
     });
 

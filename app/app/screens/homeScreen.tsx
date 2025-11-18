@@ -164,9 +164,8 @@ export default function HomeScreen() {
 const randomEmojis = [
    "✉️", "📨", "📬",
   "📅", "🗓️", "⏰", "📌",
-  "⚠️", "❗", "🚨",
- , "📝", "📋", "🔔",
-  "🔔", "📣", "📢", 
+  "⚠️", "❗", "🚨","📝", "📋", "🔔",
+  "🔔", "📣", "📢"
   
 ];
 
@@ -403,8 +402,9 @@ const randomEmojis = [
     </Text>
   </View>
 ) : (
-            {
-
+  <ScrollView>
+            
+{
               mockItems.map((item, idx) => (
                 <View style={styles.eventItemContainer} key={idx}>
                   <View style={styles.eventIconContainer}>
@@ -439,6 +439,8 @@ const randomEmojis = [
                 </View>
               ))
             }
+              </ScrollView>
+            
 
 
 )}
@@ -550,6 +552,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     paddingVertical: 14,
+    marginHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
@@ -559,11 +562,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#f0f4f8",
     alignItems: "center",
-    justifyContent: "center",
+   
     marginRight: 12,
-    marginTop: 2,
   },
-  eventIcon: { fontSize: 22 },
+  eventIcon: { fontSize: 18,     marginTop: 6,
+ },
   eventContentContainer: { flex: 1 },
   eventTitle: {
     fontSize: 15,
