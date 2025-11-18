@@ -170,6 +170,7 @@ const tasks = await getTasks([emailData]);
       let res = await sendTaskToDB(tasks.output,emailData)
       console.log("res", res)
        ws.send( JSON.stringify(res));
+    tasksCalculated.add(subscriptionId);
 
 
       }
@@ -226,8 +227,9 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
       user_email: emailData?.to[0],
       description: emailData?.preview,
       show: true,
-      actions: data?.actions,
-      entities: data?.entities})
+      actions: JSON.stringify(data?.actions),
+      entities: JSON.stringify(data?.entities)
+    })
 
 
    const response = await new taskSchema({
@@ -251,3 +253,10 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
     throw error;
   }
 };
+
+
+const createEventInOutlook = async (data:any, emailData:any) => {
+  
+
+
+}

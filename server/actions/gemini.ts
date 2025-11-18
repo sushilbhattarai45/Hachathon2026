@@ -5,8 +5,7 @@ import responseJsonSchmea from "./responseJsonSchema.js";
 
 const systemInstruction = `You are an advanced email workflow assistant for Outlook Graph API.
 
-You will be given the FULL Outlook message object exactly as returned by:
-GET https://outlook.office.com/api/v2.0/me/messages/{id}
+You MUST return output in the final format shown at the end of this prompt.
 
 Your goal is to extract structured actionable information from emails and output a strict JSON schema. All fields in the schema must be populated if possible, following these detailed rules.
 
@@ -241,7 +240,7 @@ export default async function getTasks(emailInfo: any) {
         // Apply the system instruction
         systemInstruction: prompt,
         responseMimeType: "application/json",
-        responseSchema: responseJsonSchmea,
+        // responseSchema: responseJsonSchmea,
       },
     });
 
