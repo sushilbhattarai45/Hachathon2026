@@ -476,6 +476,7 @@ const handleActionSubmit = async () => {
   ]}
   onPress={() => {
     setCurrentAction(action);
+    setSelectedMessageId(item.message_id);
     // Autofill payload
     const payload = action.action_payload || {};
     setCurrentPayload({
@@ -761,7 +762,6 @@ const handleActionSubmit = async () => {
                 `${process.env.EXPO_PUBLIC_API_URL}/actions/createCalendarEvent`,
                 {outlookPayload,
                   token: toke,
-                  type: currentAction?.type
               },
                
               );
@@ -770,6 +770,17 @@ const handleActionSubmit = async () => {
 
 
               alert("Reminder created successfully!");
+              if (response.status === 200) {
+let res = await axios.post(process.env.EXPO_PUBLIC_API_URL+"/actions/updateTask",{
+  taskid: selectedMessageId,
+})
+if(res.status === 200)
+
+alert("Task updated successfully!");
+
+
+
+              }
               setModalVisible(false);
               setCurrentPayload({});
               
