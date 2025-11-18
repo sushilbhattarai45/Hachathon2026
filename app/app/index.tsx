@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import {User} from 'lucide-react-native';
 import {router} from 'expo-router';
@@ -12,6 +13,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
+import LottieView from 'lottie-react-native';
 
 WebBrowser.maybeCompleteAuthSession();
 import {getNewAccessToken} from '@/components/getNewToken';
@@ -204,27 +206,14 @@ else
     <View style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <User
-            color="red"
-            size={48}
-            style={{
-              alignContent: 'center',
-              alignSelf: 'center',
-              justifyContent: 'center',
-              marginTop: 20,
-            }}
-          />
-          <Text
-            style={{
-              ...styles.appName,
-              fontFamily: 'System',
-              alignSelf: 'center',
-              marginTop: 40,
-            }}
-          >
-            Hachathon
-          </Text>
-          <Text
+         <Image source={require('../assets/logo.png')} style={{width: 96, height: 96, marginRight: 8,
+
+justifyContent: 'center',
+alignSelf: 'center',
+
+marginTop: 40,
+         }} />
+         <Text
             style={{
               ...styles.tagline,
 
@@ -234,10 +223,29 @@ else
           >
             Smart events, smarter teams
           </Text>
+          {/* <Text
+            style={{
+              ...styles.appName,
+              fontFamily: 'System',
+              alignSelf: 'center',
+              marginTop: 30,
+              fontSize: 24,
+              color : '#335acf',
+            }}
+          >
+            Login
+          </Text> */}
+          
         </View>
 
         <View style={styles.center}>
-          {/* optional logo/illustration can go here */}
+          <LottieView source={require('../assets/lottie.json')} autoPlay loop
+          
+          style={{
+            height: 400,
+            width: 400,
+          }}
+          />
         </View>
 
         <View style={styles.footer}>
@@ -245,13 +253,39 @@ else
             accessibilityRole="button"
             accessibilityLabel="Continue with Outlook"
             activeOpacity={0.9}
-            style={styles.outlookButton}
+            style={{
+              ...styles.outlookButton,
+              marginTop: 20,
+              backgroundColor: '#0078D4',
+              borderRadius: 16,
+             
+              shadowColor: '#0078D4',
+              shadowOpacity: 0.25,
+              shadowRadius: 8,
+            }}
             onPress={onContinueWithOutlook}
           >
-            <View style={styles.iconContainer}>
-              <Text style={styles.iconText}>O</Text>
+            <View style={
+              {
+
+                alignItems: 'center',
+                justifyContent: 'center',
+                alignSelf: 'center',
+                paddingHorizontal: 10,
+
+                gap: 8,
+                
+            }}>
+<Image source={require('../assets/outlook.png')} style={{width: 36, height: 36, marginRight: 8}} />
             </View>
-            <Text style={styles.outlookText}>Continue with Outlook</Text>
+            <Text style={{
+              ...styles.outlookText,
+              justifyContent: 'center',
+              alignSelf: 'center',
+              fontSize: 16,
+              alignItems  : 'center',
+              
+            }}>Continue with Outlook</Text>
           </TouchableOpacity>
         </View>
       </View>

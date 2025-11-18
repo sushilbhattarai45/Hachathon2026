@@ -40,7 +40,7 @@ Your goal is to extract structured actionable information from emails and output
   - SentDateTime
   - Id (used as message_id)
 - **Title**: short, **3–5 words** representing main idea, not the original subject verbatim. **First letter must be capitalized.**
-- **Description**: summarize the main takeaway in **10–15 words**, **first letter capitalized**. **Must never include the email signature.** Only include important info.
+- **Description**: summarize the content of the email and  takeaway in **10–15 words**, **first letter capitalized**. **Must never include the email signature.** Only include important info Dont not copy paste mail description.
 - Email signatures (like this):
 Sushil Bhattarai
 EducationUSA Opportunity Funds 2025 Grantee

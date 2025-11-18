@@ -305,7 +305,7 @@ const randomEmojis = [
           <TouchableOpacity style={styles.navButton}>
             <Text style={styles.navText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Hachathon</Text>
+          <Text style={styles.headerTitle}>Jotly</Text>
           <TouchableOpacity style={styles.navButton}>
             <Text style={styles.navText}>⋯</Text>
           </TouchableOpacity>
@@ -334,10 +334,10 @@ const randomEmojis = [
               <TouchableOpacity
                 key={idx}
                 onPress={async () => {
-                  // alert("logour");
-                  // await SecureStorage.deleteItemAsync("accessToken");
-                  // await SecureStorage.deleteItemAsync("refreshToken");
-                  // router.push("/");
+                  alert("logour");
+                  await SecureStorage.deleteItemAsync("accessToken");
+                  await SecureStorage.deleteItemAsync("refreshToken");
+                  router.push("/");
                   setSelectedDate(date);
                   scrollToDate(date);
                 }}
@@ -385,7 +385,7 @@ const randomEmojis = [
 
         {/* Events Header */}
         <View style={styles.eventsHeaderContainer}>
-          <Text style={styles.eventsHeaderText}>Events for the Day</Text>
+          <Text style={styles.eventsHeaderText}>Tasks for the Day</Text>
         </View>
 
         {/* Events List or No Events */}
@@ -450,6 +450,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 20,
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,

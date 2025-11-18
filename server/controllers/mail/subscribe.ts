@@ -169,7 +169,7 @@ const tasks = await getTasks([emailData]);
       console.log(tasks.output, emailData)
       let res = await sendTaskToDB(tasks.output,emailData)
       console.log("res", res)
-       ws.send(JSON.stringify(res));
+       ws.send( JSON.stringify(res));
 
 
       }
@@ -216,6 +216,8 @@ const data = await response.json();
 }
 
 export const sendTaskToDB = async (data:any, emailData:any) => {
+  // console.log(JSON.stringify(data))
+  // console.log("HAHAHH")
   try {
    console.log({ 
        message_id: emailData.subject,
@@ -230,10 +232,10 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
 
    const response = await new taskSchema({
       message_id:data?.message_id,
-      title: emailData?.subject,
+      title: data?.title,
       email_type: "email",
       user_email: emailData.to[0],
-      description: emailData.preview,
+      description: data?.description,
       show: true,
       actions: data?.actions,
       icon : data?.icon,
