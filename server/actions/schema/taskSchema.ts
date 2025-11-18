@@ -32,7 +32,7 @@ const TaskSchema = new mongoose.Schema(
     description: { type: String, default: "" },
 
     show: { type: Boolean, default: true },
-
+    isactionComplete: { type: Boolean, default: false },
     actions: { type: [ActionSchema], default: [] },
 
     entities: { type: EntitiesSchema, default: () => ({}) }

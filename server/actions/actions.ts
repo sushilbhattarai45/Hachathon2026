@@ -216,7 +216,6 @@ let dueDate = reminderDetails.dueDateTime
 
 console.log(reminderDetails)
 
-  console.log("heyyyyyyyyyyyyyyyyyyyyyyyyyyy")
   const listId = await getOrCreateTaskList(listName, accessToken);
   console.log(`Adding task "${title}" to list ID: ${listId}`);
 
