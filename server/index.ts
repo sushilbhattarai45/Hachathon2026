@@ -1,5 +1,7 @@
 import { subscribe } from 'diagnostics_channel';
 import express from 'express';
+
+import ActionsRouter from './routers/actionsRouter.js';
 import MailRouter from './routers/mailRouter.js';
 import WebSocket from 'ws';
 import mongoose from 'mongoose';
@@ -35,6 +37,8 @@ app.get('/hi', (req, res) => {
 )
 
 app.use("/user", UserRouter);
+
+app.use("/actions", ActionsRouter);
 
 stratWebSocketConnections(server);
 
