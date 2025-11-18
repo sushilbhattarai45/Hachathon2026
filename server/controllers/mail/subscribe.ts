@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import "dotenv/config";
 import getTasks from "../../actions/gemini.js";
 import { userConnections } from "../../config/wsConfig.js";
+import taskSchema from "../../actions/schema/taskSchema.js";
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -165,6 +166,9 @@ export const webhookHandler = async (req: Request, res: Response) => {
       try{
 const tasks = await getTasks([emailData]);
       ws.send(JSON.stringify({ tasks }));
+      console.log(tasks)
+      sendTaskToDB(tasks.output)
+
       }
       catch(err)
       {
@@ -208,23 +212,21 @@ const data = await response.json();
 
 }
 
-export const sendTaskToDB = async (req: Request, res: Response) => {
-const data = req.body;
-console.log(data)
-if (!data.email) {
-  return res.status(400).json({ error: "Email is required" });
-  }
+export const sendTaskToDB = async (data:any) => {
   try {
-    const user = await User.findOne({ email: data.email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    if (!data.message_id) {
+      throw new Error("❌ message_id is required to store task");
     }
-    const tasks = await getTasks(data.emails);
-    console.log(tasks)
-    await user.save();
-    res.status(200).json({ message: "Tasks updated successfully" });
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
+    const saved = await taskSchema.findOneAndUpdate(
+      { message_id: data.message_id },
+      { $set: data },
+      { new: true, upsert: true }
+    );
+    console.log("✅ Task saved to DB:", saved.message_id);
+    return saved;
 
-}
+  } catch (error) {
+    console.error("❌ Error saving task:", error);
+    throw error;
+  }
+};
