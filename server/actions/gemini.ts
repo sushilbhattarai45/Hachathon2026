@@ -229,7 +229,7 @@ OUTPUT:
   "actions": [
     {
       "type": "link",
-      "action_payload": { "link": "https://track.com/xyz" },
+      "action_payload": { title: 'Track', "link": "https://track.com/xyz" },
       "missing_fields": []
     }
   ],
