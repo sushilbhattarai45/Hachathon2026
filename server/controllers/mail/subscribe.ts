@@ -151,6 +151,7 @@ export const webhookHandler = async (req: Request, res: Response) => {
     const emailData = {
       subject: message.subject,
       from: message.from?.emailAddress?.address,
+      to : message.toRecipients.map((r:any)=>r.emailAddress.address),
       preview: message.bodyPreview,
     };
 
@@ -166,8 +167,8 @@ export const webhookHandler = async (req: Request, res: Response) => {
       try{
 const tasks = await getTasks([emailData]);
       ws.send(JSON.stringify({ tasks }));
-      console.log(tasks)
-      sendTaskToDB(tasks.output)
+      console.log(tasks.output, emailData)
+      sendTaskToDB(tasks.output,emailData)
 
       }
       catch(err)
@@ -212,17 +213,32 @@ const data = await response.json();
 
 }
 
-export const sendTaskToDB = async (data:any) => {
+export const sendTaskToDB = async (data:any, emailData:any) => {
   try {
-    if (!data.message_id) {
-      throw new Error("❌ message_id is required to store task");
-    }
-    const saved = await taskSchema.findOneAndUpdate(
-      { message_id: data.message_id },
-      { $set: data },
-      { new: true, upsert: true }
-    );
-    console.log("✅ Task saved to DB:", saved.message_id);
+   console.log({ 
+       message_id: emailData.subject,
+      title: emailData.subject,
+      email_type: "email",
+      user_email: emailData.to[0],
+      description: emailData.preview,
+      show: true,
+      actions: data.actions,
+      entities: data.entities})
+
+
+   const response = await new taskSchema({
+      message_id: emailData.subject,
+      title: emailData.subject,
+      email_type: "email",
+      user_email: emailData.to[0],
+      description: emailData.preview,
+      show: true,
+      actions: data.actions,
+      entities: data.entities
+    }).save();
+    
+    const saved = await taskSchema.findOne({ message_id: emailData.subject });
+    console.log("✅ Task saved to DB:",saved);
     return saved;
 
   } catch (error) {

@@ -21,11 +21,12 @@ const TaskSchema = new mongoose.Schema(
   {
     message_id: { type: String, required: true },
 
-    today_date: { type: String, default: "" },
+    today_date: { type:Date, default: new Date() },
 
     title: { type: String, default: "" },
 
     email_type: { type: String, default: "" },
+    user_email: { type: String, default: "" },
 
     description: { type: String, default: "" },
 
