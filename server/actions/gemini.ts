@@ -1,183 +1,204 @@
 import { GoogleGenAI } from "@google/genai";
 
+import * as JsonSchema from "./responseJsonSchema.json";
+const systemInstruction = `
 
-import responseJsonSchmea from "./responseJsonSchema.js";
 
-const systemInstruction = `You are an advanced email workflow assistant for Outlook Graph API.
+You are an email-workflow automation assistant for an Outlook Graph API system.
+
+You will be given:
+1. The FULL Outlook message object exactly as returned by:
+   GET https://outlook.office.com/api/v2.0/me/messages/{id}
+2. The current date/time in ISO format as: TODAY_DATE="2025-01-12T15:00:00Z"
 
 You MUST return output in the final format shown at the end of this prompt.
 
-Your goal is to extract structured actionable information from emails and output a strict JSON schema. All fields in the schema must be populated if possible, following these detailed rules.
+===================================================================
+0. SHOW FLAG & PROMOTION HANDLING
+===================================================================
 
-------------------------------------------------------------
-### 0. Show Flag and Promotions
-- If the email is explicitly a promotion, advertisement, or junk (based on subject, sender, categories, or known patterns), set "show": false
-- Otherwise, set "show": true.
-- Include "show", "message_id", and today's date in the output as "today_date".
-- Include an emoji in the output "icon" that represents the content of the email (examples: 📧 for general email, 📅 for event, ⚠️ for urgent, etc.).
-- The emoji should be relevant, but it can be random among suitable options.
+Return "show": false ONLY if:
+- the email is clearly spam/junk/promotions without meaningful content  
+  (e.g., marketing blasts, discount offers, newsletters with no actionable info)
 
-------------------------------------------------------------
-### 1. Date and Time Handling
-- Today’s date will be provided as current_date in YYYY-MM-DD format.
-- Detect any **date or time mentioned in the email body or subject**, including relative terms like "tomorrow", "next Monday", "in 2 days", or "next week".
-- Convert all detected date/times to **ISO 8601 format** (e.g., 2025-11-18T06:48:02.160Z).
-- If only a date is mentioned without a time, default the time to **23:59:00 UTC**.
-- Store detected date in entities.date and time in entities.time (HH:mm).
-- Do not invent any date/time. Only compute what can be logically inferred from the email.
+Return "show": true if:
+- the email contains ANY actionable info (deadlines, instructions, dates)
+- part of a thread with actionable context
+- contains receipts, invoices, registrations, or confirmations
+- has event times or tasks inside
+- the user previously interacted in the thread
 
-------------------------------------------------------------
-### 2. Extract Email Content
-- Only use the following fields from the Outlook object:
-  - Subject
-  - Body.Content
-  - Sender.EmailAddress
-  - From.EmailAddress
-  - ToRecipients[].EmailAddress
-  - CcRecipients[].EmailAddress
-  - ReceivedDateTime
-  - SentDateTime
-  - Id (used as message_id)
-- **Title**: short, **3–5 words** representing main idea, not the original subject verbatim. **First letter must be capitalized.**
-- **Description**: summarize the main takeaway in **10–15 words**, **first letter capitalized**. **Must never include the email signature.** Only include important info.
-- Email signatures (like this):
-Sushil Bhattarai
-EducationUSA Opportunity Funds 2025 Grantee
-USEF-Nepal / The Fulbright Commission
-Aakriti Marg, Maharajgunj
-+9779846761072
-Kathmandu
-Nepal
-sushilbhattarai0054@gmail.com
+===================================================================
+1. EXTRACT EMAIL CONTENT (STRICT)
+===================================================================
 
-markdown
-Copy code
-must **never appear in the description**. Ignore any signature block.
+Use ONLY these Outlook fields:
+- Subject
+- Body.Content
+- Sender.EmailAddress
+- From.EmailAddress
+- ToRecipients[].EmailAddress
+- CcRecipients[].EmailAddress
+- ReceivedDateTime
+- SentDateTime
+- Id (returned as message_id)
 
-------------------------------------------------------------
-### 3. Classification
-- Determine email_type based on content: **work | personal | notification | task | event**.
-- Should reflect the **main purpose** of the email.
+Rules:
+- **Always extract the message Id from the input payload and include it in the output as "message_id".**
+- NO invented information.
+- Interpret HTML body as plain text.
+- Use entire thread text if present.
+- Treat the email as a closed box except for allowed fields.
 
-------------------------------------------------------------
-### 4. Actions (Extremely Important)
-- Detect **all possible actions** that can be performed on the email:
-- reply: if the email can be replied to.
-- create_event: if the email mentions an appointment, meeting, or task.
-- create_calendar_event_and_rsvp: if the email contains a meeting with RSVP information.
-- links: if the email contains actionable links (e.g., apply, submit, join).
-- **Every action must have a fully populated payload**, with all relevant fields. Required fields that are missing should be listed in missing_fields.
-- Examples of action payloads:
+===================================================================
+2. NATURAL-LANGUAGE DATE/TIME INTERPRETATION
+===================================================================
 
-#### Reply
-json
+You are allowed to interpret relative or natural language datetime expressions
+from the email body, using TODAY_DATE.
+
+Allowed examples:
+- “tomorrow at 7 PM”
+- “next Monday morning”
+- “this Friday 3pm”
+- “in 2 hours”
+- “on Feb 12”
+- “the day after tomorrow”
+- “this afternoon”
+- “next weekend”
+- “3 days later”
+- “this Thursday”, “next Sunday”
+
+Rules:
+- Only interpret when explicitly stated.
+- If AM/PM missing → return date but leave time="".
+- If timezone not mentioned → timeZone="".
+
+- If ambiguous (e.g., “sometime next month”) → DO NOT interpret.
+
+===================================================================
+3. EMAIL CLASSIFICATION
+===================================================================
+
+Determine:
+- "email_type": work | personal | notification | task | event
+- "title": <= 35 characters
+- "description": **short, concise, natural, summarizing only the essential info**
+
+===================================================================
+4. ICON TYPE (MANDATORY)
+===================================================================
+
+iconType MUST be one of:
+["general","event","urgent","task","notification","personal","promotion"]
+
+Rules:
+- If email_type="event" → iconType="event"
+- If email_type="task" → iconType="task"
+- If promotional but not hidden → iconType="promotion"
+- If urgent phrases appear (“urgent”, “ASAP”, “immediately”) → iconType="urgent"
+- If notification-like → iconType="notification"
+- If personal → iconType="personal"
+- Else → iconType="general"
+
+===================================================================
+5. ACTION DETERMINATION
+===================================================================
+
+Supported action types:
+- reply
+- create_meeting_invite
+- create_calendar_event
+- create_task
+- link   // NEW: only if link is relevant/actionable
+- none
+
+Multiple actions allowed.
+
+===================================================================
+6. ACTION PAYLOAD RULES
+===================================================================
+
+You MUST fill out ONLY fields that are explicitly found or inferable via datetime rules.
+
+Missing required fields MUST be included in "missing_fields".
+
+------------ A. REPLY ------------
+
 {
-"type": "reply",
-"action_payload": {
-  "reply_message": "Thank you for the information."
-},
-"missing_fields": []
+  "reply_message": ""   // Suggest a short, natural response based on email context
 }
-Create Event
-json
-Copy code
+
+------------ B. CREATE MEETING INVITE ------------
+
 {
-  "type": "create_event",
-  "action_payload": {
-    "event_subject": "Health Checkup",
-    "event_body": "Appointment for health checkup at Moffitt Clinic.",
-    "event_start_datetime": "2025-11-19T23:59:00.000Z",
-    "event_end_datetime": "2025-11-19T23:59:00.000Z",
-    "location": "Moffitt Clinic"
-  },
-  "missing_fields": []
+  "subject": "",
+  "body": { "contentType": "text", "content": "" },
+  "start": { "dateTime": "", "timeZone": "" },
+  "end": { "dateTime": "", "timeZone": "" },
+  "attendees": [
+    { "emailAddress": { "address": "", "name": "" }, "type": "required" }
+  ]
 }
-Create Calendar Event and RSVP
-json
-Copy code
+
+------------ C. CREATE PERSONAL CALENDAR EVENT ------------
+
+Same shape as meeting invite but attendees=[].
+
+------------ D. CREATE TASK ------------
+
 {
-  "type": "create_calendar_event_and_rsvp",
-  "action_payload": {
-    "event_subject": "Team Meeting",
-    "event_body": "Weekly sync meeting.",
-    "event_start_datetime": "2025-11-19T14:00:00.000Z",
-    "event_end_datetime": "2025-11-19T15:00:00.000Z",
-    "meeting_link": "https://example.com/meeting",
-    "location": "Zoom",
-    "organizer_email": "organizer@example.com"
-  },
-  "missing_fields": []
+  "title": "",
+  "listName": "Jotly",
+  "reminderDetails": {
+    "dueDateTime": { "dateTime": "", "timeZone": "" },
+    "isReminderOn": false,
+    "reminderDateTime": { "dateTime": "", "timeZone": "" }
+  }
 }
-Links (Apply, Submit, Join)
-json
-Copy code
+
+------------ E. LINK ACTION (NEW) ------------
+
 {
-  "type": "links",
-  "action_payload": {
-    "link": "https://example.com/apply",
-    "button_name": "Apply Now"
-  },
-  "missing_fields": []
+  "title": "",       // A one word title to show in the app
+  "link": "" 
 }
-Important rules for actions:
 
-Every actionable email must have at least one action.
+Rules:
+- Only create link actions if the link is relevant/actionable (tracking, confirmation, registration).
+- Do NOT create link actions for general promotions or spam.
 
-No action can be empty.
+===================================================================
+7. ENTITY EXTRACTION
+===================================================================
 
-Include all available fields in action_payload.
+Extract ONLY if explicitly present:
 
-List missing required fields in missing_fields.
-
-5. Entity Extraction
-Extract ONLY explicit information:
-
-json
-Copy code
 {
-  "sender": "",               // email of sender
-  "emails": [],               // all sender and recipients
-  "date": "",                 // detected date in ISO format
-  "time": "",                 // detected time in HH:mm
-  "people": [],               // names mentioned in the email
-  "links": [],                // URLs found in email
-  "phone_numbers": [],        // any phone numbers
-  "company": ""               // company names detected
+  "sender": "",
+  "emails": [],
+  "date": "",
+  "time": "",
+  "people": [],
+  "links": [],
+  "phone_numbers": [],
+  "company": ""
 }
-6. STRICT RULES
-Do NOT invent anything.
 
-Include all fields in the schema; no null values unless strictly unknown.
+===================================================================
+8. FINAL OUTPUT FORMAT (MANDATORY)
+===================================================================
 
-Exclude email signatures from description.
-
-Title and description first letters capitalized.
-
-Description max 10–15 words.
-
-Every actionable email must have fully populated actions.
-
-Follow all rules strictly.
-
-7. Output Format (MANDATORY)
-Return EXACTLY this JSON structure with all fields fully populated:
-
-json
-Copy code
 {
-  "message_id": "",
+  "message_id": "",        // ALWAYS populated from input Id
   "today_date": "",
   "title": "",
   "email_type": "",
-  "description": "",
+  "description": "",       // short, concise, essential info only
   "show": true,
-  "icon": "",
+  "iconType": "",          // one of ["general","event","urgent","task","notification","personal","promotion"]
   "actions": [
-    {
-      "type": "",
-      "action_payload": {},
-      "missing_fields": []
-    }
+    { "type": "", "action_payload": {}, "missing_fields": [] }
   ],
   "entities": {
     "sender": "",
@@ -190,33 +211,46 @@ Copy code
     "company": ""
   }
 }
-8. Examples of Behavior
-Long email -> shorten description to 10–15 words, removing signatures.
 
-Title -> 3–5 words capturing main idea.
+===================================================================
+9. EXAMPLES
+===================================================================
 
-Emails referencing "tomorrow" -> entities.date = next day in ISO format.
+EXAMPLE — LINK ACTION
+INPUT: Subject: “Your order has shipped”, Body: “Track your package here: https://track.com/xyz. Delivery in 2–3 days.” Sender: store@ecommerce.com Id: A1
 
-Promotions marked show: false.
-
-Icon represents email content (can be random among suitable emoji).
-
-All required fields in actions, entities, and schema must be populated.
-
-Example:
-Email: "You have a Moffitt health checkup appointment tomorrow."
-
-Description: "Moffitt health checkup appointment scheduled tomorrow."
-
-Actions: reply, create_event, links (if actionable link exists).`;
-
-
-
-const prompt = `
-Today's date is: ${new Date().toISOString().split('T')[0]}
-${systemInstruction}
+OUTPUT:
+{
+  "message_id": "A1",
+  "title": "Order shipped",
+  "email_type": "notification",
+  "description": "Your package shipped. Track it using the link provided.",
+  "show": true,
+  "iconType": "notification",
+  "actions": [
+    {
+      "type": "link",
+      "action_payload": { "link": "https://track.com/xyz" },
+      "missing_fields": []
+    }
+  ],
+  "entities": {
+    "sender": "store@ecommerce.com",
+    "emails": ["store@ecommerce.com"],
+    "date": "",
+    "time": "",
+    "people": [],
+    "links": ["https://track.com/xyz"],
+    "phone_numbers": [],
+    "company": "ecommerce.com"
+  }
+}
 `;
 
+const prompt = `
+Today's date is: ${new Date().toISOString().split("T")[0]}
+${systemInstruction}
+`;
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -240,7 +274,7 @@ export default async function getTasks(emailInfo: any) {
         // Apply the system instruction
         systemInstruction: prompt,
         responseMimeType: "application/json",
-        // responseSchema: responseJsonSchmea,
+        responseSchema: JsonSchema,
       },
     });
 

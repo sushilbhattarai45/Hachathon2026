@@ -1,170 +1,92 @@
-const jsonSchema = {
-  "title": "EmailAutomationResponse",
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EmailWorkflowAutomationOutput",
   "type": "object",
-  "additionalProperties": false,
   "properties": {
-    "title": {
+    "message_id": {
       "type": "string",
-      "description": "Short title that fits 1–2 lines on mobile."
+      "description": "The unique ID of the original Outlook message."
     },
     "today_date": {
       "type": "string",
-      "description": "Today's date in ISO format"
-      },
-      "iconType":{
-type: "string",
-description: " type that represents the content of the email correctly"
-      },
-    "messageId": {
-      type: "string",
-      description: "The message ID of the email"
-      },
-    "show": {
-      type: "boolean",
-      description: "Whether to show the email in the UI based on its content"
-      },
+      "description": "The current date/time used for relative interpretation (ISO 8601 format)."
+    },
+    "title": {
+      "type": "string",
+      "description": "A short title (<= 35 characters) summarizing the email."
+    },
     "email_type": {
       "type": "string",
       "enum": ["work", "personal", "notification", "task", "event"],
-      "description": "Category of email."
+      "description": "Classification of the email content."
     },
     "description": {
       "type": "string",
-      "description": "A natural, direct summary."
+      "description": "Short, concise, natural language summary of the essential information."
+    },
+    "show": {
+      "type": "boolean",
+      "description": "Flag to determine if the email should be displayed (false for clear spam/promotion)."
+    },
+    "iconType": {
+      "type": "string",
+      "enum": ["general", "event", "urgent", "task", "notification", "personal", "promotion"],
+      "description": "The icon representation based on classification and urgency."
     },
     "actions": {
       "type": "array",
-      "description": "List of actions extracted from the email.",
+      "description": "List of suggested actions for the user.",
       "items": {
         "type": "object",
-        "additionalProperties": false,
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "reply",
-              "create_event",
-              "create_calendar_event_and_rsvp",
-              "none"
-            ],
-            "description": "Action type."
+            "enum": ["reply", "create_meeting_invite", "create_calendar_event", "create_task", "link", "none"],
+            "description": "The action type."
           },
           "action_payload": {
             "type": "object",
-            "description": "Action payload. Only fields relevant to the action type will be populated.",
-            "additionalProperties": false,
-            "properties": {
-              "reply_message": {
-                "type": "string",
-                "description": "Message body for reply. Empty if irrelevant."
-              },
-              "event_subject": {
-                "type": "string",
-                "description": "Event subject. Empty if missing or irrelevant."
-              },
-              "event_body": {
-                "type": "string",
-                "description": "Event body. Empty if missing or irrelevant."
-              },
-              "event_start_datetime": {
-                "type": "string",
-                "description": "Start datetime (ISO). Empty if missing.",
-                "format": "date-time"
-              },
-              "event_end_datetime": {
-                "type": "string",
-                "description": "End datetime (ISO). Empty if missing.",
-                "format": "date-time"
-              },
-              "location": {
-                "type": "string",
-                "description": "Event location. Empty if missing."
-              },
-              "meeting_link": {
-                "type": "string",
-                "description": "Meeting link for RSVP events."
-              },
-              "organizer_email": {
-                "type": "string",
-                "description": "Organizer email for RSVP events."
-              }
-            }
+            "description": "The data payload specific to the action type."
+            // NOTE: Detailed schema validation for action_payload depends on the 'type' field and is complex
+            // to represent fully in simple draft-07 without 'oneOf' or external definitions.
           },
           "missing_fields": {
             "type": "array",
-            "description": "List of required fields missing from the email.",
-            "items": {
-              "type": "string"
-            }
+            "items": { "type": "string" },
+            "description": "List of required fields for the action that could not be extracted."
           }
         },
-        "required": ["type", "action_payload", "missing_fields"]
+        "required": ["type", "action_payload", "missing_fields"],
+        "additionalProperties": false
       }
     },
     "entities": {
       "type": "object",
-      "additionalProperties": false,
+      "description": "Structured data extracted explicitly from the email body/headers.",
       "properties": {
-        "sender": {
-          "type": "string",
-          "description": "Sender name or email."
-        },
-        "emails": {
-          "type": "array",
-          "description": "All emails mentioned.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "date": {
-          "type": "string",
-          "description": "Date mentioned in the email (if any)."
-        },
-        "time": {
-          "type": "string",
-          "description": "Time mentioned in the email (if any)."
-        },
-        "people": {
-          "type": "array",
-          "description": "People referenced.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "phone_numbers": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "company": {
-          "type": "string"
-        }
+        "sender": { "type": "string" },
+        "emails": { "type": "array", "items": { "type": "string" } },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "people": { "type": "array", "items": { "type": "string" } },
+        "links": { "type": "array", "items": { "type": "string" } },
+        "phone_numbers": { "type": "array", "items": { "type": "string" } },
+        "company": { "type": "string" }
       },
-      "required": [
-        "sender",
-        "emails",
-        "date",
-        "time",
-        "people",
-        "links",
-        "phone_numbers",
-        "company"
-      ]
+      "required": ["sender", "emails", "date", "time", "people", "links", "phone_numbers", "company"],
+      "additionalProperties": false
     }
   },
   "required": [
+    "message_id",
+    "today_date",
     "title",
     "email_type",
     "description",
+    "show",
+    "iconType",
     "actions",
     "entities"
-  ]
+  ],
+  "additionalProperties": false
 }
-export default jsonSchema;
