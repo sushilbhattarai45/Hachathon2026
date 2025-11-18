@@ -83,10 +83,11 @@ await SecureStore.setItemAsync('userEmail', mail);
 
       const data = await res.json();
       console.log('Token response:', data);
+      alert("Access Token: "+ data.access_token)
       setAccessToken(data.access_token);
       storeTokens(data);
 
-      router.push('/screens/homeScreen');
+      // router.push('/screens/homeScreen');
     } catch (err) {
       console.error('Token exchange error:', err);
     }
@@ -121,9 +122,12 @@ useEffect(() => {
 
  const storeTokens = async (data: any) => {
   const expirationTime = Date.now() + data.expires_in * 1000; // ms timestamp
+  if (data.refresh_token && data.access_token) {
   await SecureStore.setItemAsync('accessToken', data.access_token);
   await SecureStore.setItemAsync('refreshToken', data.refresh_token);
   await SecureStore.setItemAsync('tokenExpiration', expirationTime.toString());
+
+  }
 return
 };
   React.useEffect(() => {

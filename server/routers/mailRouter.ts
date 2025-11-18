@@ -3,7 +3,7 @@ import { getEmail, subscribeMail, webhookHandler } from "../controllers/mail/sub
 
 const Router = express.Router();
 
-// Router.post("/subscribe", subscribeMail);
+Router.post("/subscribe", subscribeMail);
 Router.post("/webhook", webhookHandler);
 Router.post("/getEmail", getEmail)
 

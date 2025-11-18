@@ -11,6 +11,16 @@ export default function HomeScreen() {
 const ITEM_WIDTH = 52; 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const [accessToken, setAccessToken] = useState<string | null>(null);
+let getEmailandConnect= async()=>{
+
+  let mail = await SecureStorage.getItemAsync('userEmail');
+let token = await SecureStorage.getItemAsync('accessToken');
+setAccessToken(token);
+setUserEmail(mail);
+console.log("user email", mail);
+}
+    const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev');
+
   useEffect(() => {
     const today = new Date();
     const newDates = [];
@@ -20,13 +30,9 @@ const [accessToken, setAccessToken] = useState<string | null>(null);
       newDates.push(d);
     }
     setDates(newDates);
-    WSConn();
+    getEmailandConnect();    
   }, []);
-  useEffect(() => {
-    getTokens()
-    }, []);
-
-  let getTokens= async()=>{
+    let getTokens= async()=>{
     let mail = await SecureStorage.getItemAsync('userEmail');
 let token = await SecureStorage.getItemAsync('accessToken');  
 
@@ -35,28 +41,45 @@ setToken(token);
 
 
   }
-const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev');
+  useEffect(() => {
+    getTokens()
+  }, [token,userEmail]);
+
+useEffect(() => {
+  WSConn()
+}, []);
 
 const WSConn = () => {
-  
 ws.onerror = (error) => console.error(error);
 
 ws.onopen =async () => {
-    let userEmail = await SecureStorage.getItemAsync('userEmail');
-    let token = await SecureStorage.getItemAsync('accessToken');
+    let email = await SecureStorage.getItemAsync('userEmail');
+    let tok = await SecureStorage.getItemAsync('accessToken');
     console.log("WebSocket connected");
+
+    alert(email + " "+ tok)
   ws.send(JSON.stringify({
-    "userId": userEmail,
-    'token': token
+    "userId": email || userEmail,
+    'token': tok|| token
   }));
   console.log('WebSocket connection opened');
 };
 
-ws.onmessage = (event) => {
+ws.onmessage =async (event) => {
   console.log('received: %s', event.data);
+  let eventData = JSON.parse(event.data);
+
+  if (eventData.userId) {
+  let userId = eventData.userId;
+  console.log("stored user id"+ userId);
+
+await SecureStorage.setItemAsync('userId', userId);
+  }
+  alert(`New Email from ${eventData.from}: ${eventData.subject} - ${eventData.preview}`);
 };
 
 };
+
 
   // Separate effect to scroll after dates are set
   useEffect(() => {
@@ -175,7 +198,6 @@ ws.onmessage = (event) => {
                     alert("logour")
                 await SecureStorage.deleteItemAsync('accessToken');
                 await SecureStorage.deleteItemAsync('refreshToken');
-                ws.close();
                 router.push('/');
                   setSelectedDate(date);
                   scrollToDate(date);

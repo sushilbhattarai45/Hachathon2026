@@ -4,13 +4,17 @@ import { subscribeMail } from "../controllers/mail/subscribe.js";
 
 export interface AuthentiCatedWebSocket extends WebSocket{
     userId?: string;
-    token?: string;
+    token ?: string;
 }
+export const userConnections = new Map<string, UserConnection>();
 
 
-export const userConnections= new Map<string , AuthentiCatedWebSocket>()
-
-
+export interface UserConnection {
+  ws: AuthentiCatedWebSocket;
+  token: string;
+  email: string; 
+  userId?: string;
+}
 
 export const stratWebSocketConnections=async(server:any)=>{
 
@@ -20,6 +24,8 @@ const wss = new WebSocketServer({server})
 
 wss.on("connection", (ws:AuthentiCatedWebSocket)=>{
     console.log("connected")
+    console.log(ws.userId)
+
     ws.on("message",async (msg:string)=>{
   
   try {
@@ -27,17 +33,23 @@ wss.on("connection", (ws:AuthentiCatedWebSocket)=>{
     console.log(data)
     if( data.userId !=null)
     {
-        ws.userId = data.userId
         ws.token = data.token
-        userConnections.set(
-        data.userId, ws)
+    if(!userConnections.has(ws.token!))
+      {
+let id = await  subscribeMail(ws.userId!,ws.token );
+userConnections.set(id!, {
+  ws,
+  token: ws.token!,
+  email: data.email,
+  userId: id!
+});
+      console.log(`User ${id} connected via WebSocket`);
 
-        
-        console.log(`User ${data.userId} authenticated & connected`);
-if (ws.token && ws.userId)
-     subscribeMail(ws.userId, ws.token)
+      ws.send(JSON.stringify({ message: "WebSocket connection established" , 
+userId: id
+      }));
+      }
     }
-    
   }
  catch (err) {
         console.log("Invalid WS message", err);
@@ -53,5 +65,3 @@ if (ws.token && ws.userId)
 })
 
 }
-
-
