@@ -19,6 +19,8 @@ GET https://outlook.office.com/api/v2.0/me/messages/{id}
 - If the email is informational but does not contain any tasks or requests, "show": true.  
 - If a promotional/junk email is part of a thread that contains user requests, tasks, or events, it should still be processed and "show": true to preserve context.  
 - Include the "show" field in the final output.
+- Also include the "message_id" field in the final output.
+-Also add a today's data as today_date field in the final output.
 
 ------------------------------------------------------------
 ### 1. Extract Email Content
@@ -114,6 +116,7 @@ Extract ONLY if explicit:
 
 {
   "message_id": "",
+  "today_date": "",
   "title": "",
   "email_type": "",
   "description": "",
