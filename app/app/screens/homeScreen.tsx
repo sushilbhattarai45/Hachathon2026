@@ -1,31 +1,145 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text,Dimensions, StyleSheet, FlatList, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import * as SecureStorage from 'expo-secure-store';
-import { router } from 'expo-router';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  View,
+  Text,
+  Dimensions,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+} from "react-native";
+import * as SecureStorage from "expo-secure-store";
+import { router } from "expo-router";
+
+
+
+
+// ---------------------- NEW EVENTS DATA SCHEMA ----------------------
+type EventAction = {
+  type: string;
+  action_payload: Record<string, any>;
+  missing_fields: string[];
+};
+
+type EventEntity = {
+  sender: string;
+  emails: string[];
+  date: string;
+  time: string;
+  people: string[];
+  links: string[];
+  phone_numbers: string[];
+  company: string;
+};
+
+type EventItem = {
+  message_id: string;
+  today_date: string;
+  title: string;
+  email_type: "event" | "task" | "note" | "form";
+  description: string;
+  show: boolean;
+  actions: EventAction[];
+  entities: EventEntity;
+  icon: string;
+};
+
+const eventsData: Record<string, EventItem[]> = {
+  "2025-11-16": [
+    {
+      message_id: "1",
+      today_date: "2025-11-16",
+      title: "Biology Lecture",
+      email_type: "event",
+      description: "Chapter 5: Photosynthesis. Bring lab notebook",
+      show: true,
+      actions: [
+        { type: "remind", action_payload: {}, missing_fields: [] },
+        { type: "details", action_payload: {}, missing_fields: [] },
+      ],
+      entities: {
+        sender: "Prof. Smith",
+        emails: ["prof.smith@uni.edu"],
+        date: "2025-11-16",
+        time: "09:00 AM",
+        people: [],
+        links: [],
+        phone_numbers: [],
+        company: "University",
+      },
+      icon: "🔬",
+    },
+    {
+      message_id: "2",
+      today_date: "2025-11-16",
+      title: "Maths Assignment",
+      email_type: "task",
+      description: "Algebra problems 1-20. Due tomorrow",
+      show: true,
+      actions: [
+        { type: "submit", action_payload: {}, missing_fields: [] },
+        { type: "remind", action_payload: {}, missing_fields: [] },
+      ],
+      entities: { sender: "Prof. Jones", emails: [], date: "2025-11-16", time: "02:30 PM", people: [], links: [], phone_numbers: [], company: "University" },
+      icon: "📐",
+    },
+    {
+      message_id: "3",
+      today_date: "2025-11-16",
+      title: "Email from Prof. Smith",
+      email_type: "note",
+      description: "Your midterm exam is scheduled for Nov 23. Good luck!",
+      show: true,
+      actions: [
+        { type: "reply", action_payload: {}, missing_fields: [] },
+        { type: "archive", action_payload: {}, missing_fields: [] },
+      ],
+      entities: { sender: "Prof. Smith", emails: ["prof.smith@uni.edu"], date: "2025-11-16", time: "10:45 AM", people: [], links: [], phone_numbers: [], company: "University" },
+      icon: "📧",
+    },
+    {
+      message_id: "4",
+      today_date: "2025-11-16",
+      title: "Attendance Form",
+      email_type: "form",
+      description: "Mark your attendance for this week's sessions",
+      show: true,
+      actions: [
+        { type: "view", action_payload: {}, missing_fields: [] },
+        { type: "submit", action_payload: {}, missing_fields: [] },
+      ],
+      entities: { sender: "Admin", emails: [], date: "2025-11-16", time: "11:00 AM", people: [], links: [], phone_numbers: [], company: "University" },
+      icon: "📋",
+    },
+  ],
+};
+
+
 export default function HomeScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const scrollViewRef = useRef<ScrollView>(null);
   const [dates, setDates] = useState<Date[]>([]);
+
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [ token, setToken] = useState<string | null>(null);
-const ITEM_WIDTH = 52; 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const [accessToken, setAccessToken] = useState<string | null>(null);
-let getEmailandConnect= async()=>{
+  const [token, setToken] = useState<string | null>(null);
 
-  let mail = await SecureStorage.getItemAsync('userEmail');
-let token = await SecureStorage.getItemAsync('accessToken');
-setAccessToken(token);
-setUserEmail(mail);
-console.log("user email", mail);
-}
-let api_url = process.env.EXPO_PUBLIC_API_URL;
-if(!api_url)
-{
-  api_url = "https://keith-unvenereal-aniyah.ngrok-free.dev"
-}
-    const ws = new WebSocket(api_url);
+  const ITEM_WIDTH = 52;
+  const SCREEN_WIDTH = Dimensions.get("window").width;
 
+  const [emailActionsData, setEmailActionsData] = useState<Record<string,EventItem[]>>(eventsData);
+
+
+  let getEmailandConnect = async () => {
+    let mail = await SecureStorage.getItemAsync("userEmail");
+    let token = await SecureStorage.getItemAsync("accessToken");
+    setToken(token);
+    setUserEmail(mail);
+    console.log("user email", mail);
+  };
+
+  let api_url = process.env.EXPO_PUBLIC_API_URL ?? "";
+  const ws = new WebSocket(api_url);
 
   useEffect(() => {
     const today = new Date();
@@ -36,63 +150,79 @@ if(!api_url)
       newDates.push(d);
     }
     setDates(newDates);
-    getEmailandConnect();    
+    getEmailandConnect();
   }, []);
-    let getTokens= async()=>{
-    let mail = await SecureStorage.getItemAsync('userEmail');
-let token = await SecureStorage.getItemAsync('accessToken');  
 
-setUserEmail(mail);
-setToken(token);
+  let getTokens = async () => {
+    let mail = await SecureStorage.getItemAsync("userEmail");
+    let token = await SecureStorage.getItemAsync("accessToken");
+
+    setUserEmail(mail);
+    setToken(token);
+  };
 
 
+  const addEmailActionsData = (data:EventItem) => {
+    setEmailActionsData((prev)=> {
+      let temp = {...prev};
+      let date = new Date(data.today_date);
+      let date_str = date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
+      temp[data.today_date] = [...(prev[data.today_date] || []), data];
+      return temp;
+    })
   }
+
   useEffect(() => {
-    getTokens()
-  }, [token,userEmail]);
+    getTokens();
+  }, [token, userEmail]);
 
-useEffect(() => {
-  WSConn()
-}, []);
+  useEffect(() => {
+    WSConn();
+  }, []);
 
-const WSConn = () => {
-ws.onerror = (error) => console.error(error);
+  const WSConn = () => {
+    ws.onerror = (error) => console.error(error);
 
-ws.onopen =async () => {
-    let email = await SecureStorage.getItemAsync('userEmail');
-    let tok = await SecureStorage.getItemAsync('accessToken');
-    console.log("WebSocket connected");
-  ws.send(JSON.stringify({
-    "userId": email || userEmail,
-    'token': tok|| token
-  }));
-  console.log('WebSocket connection opened');
-};
+    ws.onopen = async () => {
+      let email = await SecureStorage.getItemAsync("userEmail");
+      let tok = await SecureStorage.getItemAsync("accessToken");
+      console.log("WebSocket connected");
+      ws.send(
+        JSON.stringify({
+          userId: email || userEmail,
+          token: tok || token,
+        }),
+      );
+      console.log("WebSocket connection opened");
+    };
 
-ws.onmessage =async (event) => {
-  console.log('received: %s', event.data);
-  let eventData = JSON.parse(event.data);
+    ws.onmessage = async (event) => {
+      console.log("received: %s", event.data);
+      let eventData = JSON.parse(event.data);
 
-  if (eventData.userId) {
-  let userId = eventData.userId;
-  console.log("stored user id"+ userId);
 
-await SecureStorage.setItemAsync('userId', userId);
-  }
-alert (JSON.stringify(event.data));
+      if (eventData.userId) {
+        let userId = eventData.userId;
+        console.log("stored user id" + userId);
 
-};
+        await SecureStorage.setItemAsync("userId", userId);
+      }
+      alert(JSON.stringify(event.data, null, 2));
 
-};
-
+        let data:EventItem = JSON.parse(event.data);
+        if(data.show) {
+          addEmailActionsData(data);
+        }
+    };
+  };
 
   // Separate effect to scroll after dates are set
   useEffect(() => {
     if (dates.length === 0) return;
-    
+
     const today = new Date();
     const index = dates.findIndex(
-      (d) => d.toDateString() === today.toDateString()
+      (d) => d.toDateString() === today.toDateString(),
     );
 
     if (index === -1 || !scrollViewRef.current) return;
@@ -107,61 +237,34 @@ alert (JSON.stringify(event.data));
     }, 300);
   }, [dates]);
 
- const scrollToDate = (date: Date) => {
-  const index = dates.findIndex(
-    (d) => d.toDateString() === date.toDateString()
-  );
+  const scrollToDate = (date: Date) => {
+    const index = dates.findIndex(
+      (d) => d.toDateString() === date.toDateString(),
+    );
 
-  if (index === -1 || !scrollViewRef.current) return;
+    if (index === -1 || !scrollViewRef.current) return;
 
-  // Center the date in the middle of the screen
-  const xOffset = index * ITEM_WIDTH - (SCREEN_WIDTH / 6 - ITEM_WIDTH / 6);
+    // Center the date in the middle of the screen
+    const xOffset = index * ITEM_WIDTH - (SCREEN_WIDTH / 6 - ITEM_WIDTH / 6);
 
-  scrollViewRef.current.scrollTo({
-    x: xOffset,
-    animated: true,
-  });
-};
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    scrollViewRef.current.scrollTo({
+      x: xOffset,
+      animated: true,
+    });
   };
 
-  const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
-  const isSelected = (date: Date) => date.toDateString() === selectedDate.toDateString();
+
+  const isToday = (date: Date) =>
+    date.toDateString() === new Date().toDateString();
+  const isSelected = (date: Date) =>
+    date.toDateString() === selectedDate.toDateString();
 
   // Events data organized by date
-  const eventsData: { [key: string]: Array<{ id: string; type: string; title: string; time: string; notes: string; icon: string }> } = {
-    '2025-11-16': [ // Today
-      { id: '1', type: 'event', title: 'Biology Lecture', time: '9:00 AM', notes: 'Chapter 5: Photosynthesis. Bring lab notebook', icon: '🔬' },
-      { id: '2', type: 'task', title: 'Maths Assignment', time: '2:30 PM', notes: 'Algebra problems 1-20. Due tomorrow', icon: '📐' },
-      { id: '3', type: 'note', title: 'Email from Prof. Smith', time: '10:45 AM', notes: 'Your midterm exam is scheduled for Nov 23. Good luck!', icon: '📧' },
-      { id: '4', type: 'form', title: 'Attendance Form', time: '11:00 AM', notes: 'Mark your attendance for this week\'s sessions', icon: '📋' },
-    ],
-    '2025-11-17': [ // Tomorrow
-      { id: '5', type: 'task', title: 'English Essay', time: '3:30 PM', notes: '3 pages min. Topic: "Innovation in Technology"', icon: '📝' },
-      { id: '6', type: 'event', title: 'Physics Lab', time: '4:00 PM', notes: 'Experiment on momentum. Partner: Alex', icon: '⚛️' },
-      { id: '7', type: 'note', title: 'Message from Study Group', time: '5:15 PM', notes: 'Can we meet tomorrow at 2 PM? - Rahul', icon: '💬' },
-    ],
-    '2025-11-18': [
-      { id: '8', type: 'form', title: 'Internship Application', time: '7:00 PM', notes: 'Complete your profile for summer internship opportunity', icon: '🎯' },
-      { id: '9', type: 'note', title: 'History Project Deadline', time: '11:59 PM', notes: 'Group presentation on World War II next week', icon: '📚' },
-      { id: '10', type: 'task', title: 'Chemistry Lab Report', time: '2:00 PM', notes: 'Submit experiment observations and analysis', icon: '🧪' },
-    ],
-    '2025-11-19': [
-      { id: '11', type: 'event', title: 'Seminar: AI in Education', time: '10:00 AM', notes: 'Special guest speaker from tech industry', icon: '🎤' },
-      { id: '12', type: 'task', title: 'Database Project', time: '5:00 PM', notes: 'Complete schema design and setup', icon: '💾' },
-    ],
-    '2025-11-20': [
-      { id: '13', type: 'note', title: 'Club Meeting', time: '6:00 PM', notes: 'Coding club weekly meetup. Discuss new projects', icon: '👥' },
-      { id: '14', type: 'form', title: 'Mid-semester Feedback', time: '9:00 AM', notes: 'Complete course feedback survey', icon: '📝' },
-    ],
-  };
 
   // Get events for selected date
   const getEventsForDate = (date: Date) => {
-    const dateKey = date.toISOString().split('T')[0];
-    return eventsData[dateKey] || [];
+    const dateKey = date.toISOString().split("T")[0];
+    return emailActionsData[dateKey] || [];
   };
 
   const mockItems = getEventsForDate(selectedDate);
@@ -190,20 +293,23 @@ alert (JSON.stringify(event.data));
           contentContainerStyle={styles.calendarContent}
         >
           {dates.map((date, idx) => {
-            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-            const monthAbbr = date.toLocaleDateString('en-US', { month: 'short' });
+            const dayOfWeek = date.toLocaleDateString("en-US", {
+              weekday: "short",
+            });
+            const monthAbbr = date.toLocaleDateString("en-US", {
+              month: "short",
+            });
             const isCurrentDate = isToday(date);
             const isCurrentSelected = isSelected(date);
 
             return (
               <TouchableOpacity
                 key={idx}
-                onPress={async() => {
-
-                    alert("logour")
-                await SecureStorage.deleteItemAsync('accessToken');
-                await SecureStorage.deleteItemAsync('refreshToken');
-                router.push('/');
+                onPress={async () => {
+                  alert("logour");
+                  await SecureStorage.deleteItemAsync("accessToken");
+                  await SecureStorage.deleteItemAsync("refreshToken");
+                  router.push("/");
                   setSelectedDate(date);
                   scrollToDate(date);
                 }}
@@ -217,7 +323,9 @@ alert (JSON.stringify(event.data));
                   style={[
                     styles.dayOfWeekText,
                     isCurrentSelected && styles.dayOfWeekTextSelected,
-                    isCurrentDate && !isCurrentSelected && styles.dayOfWeekTextToday,
+                    isCurrentDate &&
+                      !isCurrentSelected &&
+                      styles.dayOfWeekTextToday,
                   ]}
                 >
                   {dayOfWeek}
@@ -235,7 +343,9 @@ alert (JSON.stringify(event.data));
                   style={[
                     styles.monthText,
                     isCurrentSelected && styles.monthTextSelected,
-                    isCurrentDate && !isCurrentSelected && styles.monthTextToday,
+                    isCurrentDate &&
+                      !isCurrentSelected &&
+                      styles.monthTextToday,
                   ]}
                 >
                   {monthAbbr}
@@ -251,200 +361,223 @@ alert (JSON.stringify(event.data));
         </View>
 
         {/* Events List or No Events */}
-        {mockItems.length === 0 ? (
-          <View style={styles.noEventsContainer}>
-            <Text style={styles.noEventsIcon}>📭</Text>
-            <Text style={styles.noEventsText}>No events for today</Text>
-            <Text style={styles.noEventsSubtext}>Your schedule is clear. Enjoy!</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={mockItems}
-            renderItem={({ item }) => (
-              <View style={styles.eventItemContainer}>
-                <View style={styles.eventIconContainer}>
-                  <Text style={styles.eventIcon}>{item.icon}</Text>
-                </View>
-                <View style={styles.eventContentContainer}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventTime}>{item.time}</Text>
-                  <Text style={styles.eventNotes}>{item.notes}</Text>
-                </View>
-                <View style={styles.eventActionsRow}>
-                  {item.type === 'event' ? (
-                    <>
-                      <TouchableOpacity style={styles.eventActionButtonSmall}>
-                        <Text style={styles.eventActionTextSmall}>Remind</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.eventActionButtonSmall}>
-                        <Text style={styles.eventActionTextSmall}>Details</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : item.type === 'form' ? (
-                    <>
-                      <TouchableOpacity style={styles.eventActionButtonSmall}>
-                        <Text style={styles.eventActionTextSmall}>View</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.eventActionButtonSmall, styles.eventActionButtonSmallActive]}>
-                        <Text style={[styles.eventActionTextSmall, styles.eventActionTextSmallActive]}>Submit</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : item.type === 'note' ? (
-                    <>
-                      <TouchableOpacity style={styles.eventActionButtonSmall}>
-                        <Text style={styles.eventActionTextSmall}>Reply</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.eventActionButtonSmall}>
-                        <Text style={styles.eventActionTextSmall}>Archive</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <>
-                      <TouchableOpacity style={styles.eventActionButtonSmall}>
-                        <Text style={styles.eventActionTextSmall}>Later</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.eventActionButtonSmall, styles.eventActionButtonSmallActive]}>
-                        <Text style={[styles.eventActionTextSmall, styles.eventActionTextSmallActive]}>Done</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
-              </View>
-            )}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.eventsListContent}
-            scrollEnabled={true}
-            nestedScrollEnabled={true}
-          />
-        )}
+{mockItems.length === 0 ? (
+  <View style={styles.noEventsContainer}>
+    <Text style={styles.noEventsIcon}>📭</Text>
+    <Text style={styles.noEventsText}>No events for today</Text>
+    <Text style={styles.noEventsSubtext}>
+      Your schedule is clear. Enjoy!
+    </Text>
+  </View>
+) : (
+  <FlatList
+    data={mockItems}
+    renderItem={({ item }) => (
+      <View style={styles.eventItemContainer}>
+        <View style={styles.eventIconContainer}>
+          <Text style={styles.eventIcon}>{item.icon}</Text>
+        </View>
+        <View style={styles.eventContentContainer}>
+          <Text style={styles.eventTitle}>{item.title}</Text>
+          <Text style={styles.eventTime}>{item.entities.time}</Text>
+          <Text style={styles.eventNotes}>{item.description}</Text>
+        </View>
+        <View style={styles.eventActionsRow}>
+          {item.actions.map((action, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={[
+                styles.eventActionButtonSmall,
+                action.type === "submit" && styles.eventActionButtonSmallActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.eventActionTextSmall,
+                  action.type === "submit" && styles.eventActionTextSmallActive,
+                ]}
+              >
+                {action.type.charAt(0).toUpperCase() + action.type.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    )}
+    keyExtractor={(item) => item.message_id}
+    contentContainerStyle={styles.eventsListContent}
+    scrollEnabled={true}
+    nestedScrollEnabled={true}
+  />
+)}
+
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  container: {  backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: "#fff" },
+  container: { backgroundColor: "#fff" },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    
+
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   navButton: { padding: 8 },
-  navText: { fontSize: 18, color: '#0f172a' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#0f172a' },
-  calendarScroll: { 
-    
-    paddingVertical: 6 },
-  calendarContent: { paddingHorizontal: 8,
-    height: 80
- },
- dateItem: {
-  width: 52,
-  alignItems: 'center',
-  paddingVertical: 8,
-  paddingHorizontal:8,
-  marginHorizontal: 2,
-  marginBottom: 16,
-  
-  justifyContent: 'center',
-  borderRadius: 8,
-  height: 64,
-  backgroundColor: '#fafafa',
-},
+  navText: { fontSize: 18, color: "#0f172a" },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: "#0f172a" },
+  calendarScroll: {
+    paddingVertical: 6,
+  },
+  calendarContent: { paddingHorizontal: 8, height: 80 },
+  dateItem: {
+    width: 52,
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    marginHorizontal: 2,
+    marginBottom: 16,
+
+    justifyContent: "center",
+    borderRadius: 8,
+    height: 64,
+    backgroundColor: "#fafafa",
+  },
 
   dateItemSelected: {
-    backgroundColor: '#0078D4',
+    backgroundColor: "#0078D4",
   },
   dateItemToday: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 2,
-    borderColor: '#0078D4',
+    borderColor: "#0078D4",
   },
-  dayOfWeekText: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },
-  dayOfWeekTextSelected: { color: '#fff' },
-  dayOfWeekTextToday: { color: '#0078D4', fontWeight: '600' },
-  dateText: { fontSize: 13, fontWeight: '700', color: '#0f172a', marginTop: 1 },
-  dateTextSelected: { color: '#fff' },
-  dateTextToday: { color: '#0078D4' },
-  monthText: { fontSize: 9, color: '#94a3b8', fontWeight: '500', marginTop: 1 },
-  monthTextSelected: { color: '#fff' },
-  monthTextToday: { color: '#0078D4', fontWeight: '600' },
+  dayOfWeekText: { fontSize: 11, color: "#94a3b8", fontWeight: "500" },
+  dayOfWeekTextSelected: { color: "#fff" },
+  dayOfWeekTextToday: { color: "#0078D4", fontWeight: "600" },
+  dateText: { fontSize: 13, fontWeight: "700", color: "#0f172a", marginTop: 1 },
+  dateTextSelected: { color: "#fff" },
+  dateTextToday: { color: "#0078D4" },
+  monthText: { fontSize: 9, color: "#94a3b8", fontWeight: "500", marginTop: 1 },
+  monthTextSelected: { color: "#fff" },
+  monthTextToday: { color: "#0078D4", fontWeight: "600" },
   selectedDateSection: { paddingHorizontal: 16, paddingVertical: 8 },
-  selectedDateText: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
+  selectedDateText: { fontSize: 14, fontWeight: "600", color: "#0f172a" },
   listContent: { paddingHorizontal: 16, paddingBottom: 20 },
   itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    
+    flexDirection: "row",
+    alignItems: "center",
+
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   itemIcon: {
     width: 36,
     height: 36,
     borderRadius: 6,
-    backgroundColor: '#e0f0ff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#e0f0ff",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
-  taskIcon: { backgroundColor: '#e0f7e0' },
+  taskIcon: { backgroundColor: "#e0f7e0" },
   itemIconText: { fontSize: 16 },
   itemContent: { flex: 1 },
-  itemTitle: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
-  itemTime: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
-  itemActions: { flexDirection: 'row', gap: 8 },
-  actionButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#e2e8f0' },
-  actionButtonActive: { backgroundColor: '#0078D4', borderColor: '#0078D4' },
-  actionText: { fontSize: 12, fontWeight: '500', color: '#64748b' },
-  actionTextActive: { color: '#fff' },
+  itemTitle: { fontSize: 13, fontWeight: "600", color: "#0f172a" },
+  itemTime: { fontSize: 11, color: "#94a3b8", marginTop: 2 },
+  itemActions: { flexDirection: "row", gap: 8 },
+  actionButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  actionButtonActive: { backgroundColor: "#0078D4", borderColor: "#0078D4" },
+  actionText: { fontSize: 12, fontWeight: "500", color: "#64748b" },
+  actionTextActive: { color: "#fff" },
   // Events Section Styles
-  eventsHeaderContainer: { paddingHorizontal: 16,
-    
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  eventsHeaderText: { fontSize: 16, fontWeight: '600', color: '#0f172a' },
+  eventsHeaderContainer: {
+    paddingHorizontal: 16,
+
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  eventsHeaderText: { fontSize: 16, fontWeight: "600", color: "#0f172a" },
   eventsListContent: { paddingHorizontal: 16, paddingBottom: 20 },
   eventItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   eventIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#f0f4f8',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#f0f4f8",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
     marginTop: 2,
   },
   eventIcon: { fontSize: 22 },
   eventContentContainer: { flex: 1 },
-  eventTitle: { fontSize: 15, fontWeight: '600', color: '#0f172a', marginBottom: 3 },
-  eventTime: { fontSize: 12, color: '#94a3b8', marginBottom: 4 },
-  eventNotes: { fontSize: 13, color: '#64748b', lineHeight: 18, fontStyle: 'italic' },
-  eventActionsRow: { flexDirection: 'row', gap: 6, marginLeft: 8, marginTop: 4 },
-  eventActionButtonSmall: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 5, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8f9fa' },
-  eventActionButtonSmallActive: { backgroundColor: '#0078D4', borderColor: '#0078D4' },
-  eventActionTextSmall: { fontSize: 11, fontWeight: '600', color: '#64748b' },
-  eventActionTextSmallActive: { color: '#fff' },
+  eventTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 3,
+  },
+  eventTime: { fontSize: 12, color: "#94a3b8", marginBottom: 4 },
+  eventNotes: {
+    fontSize: 13,
+    color: "#64748b",
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
+  eventActionsRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginLeft: 8,
+    marginTop: 4,
+  },
+  eventActionButtonSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8f9fa",
+  },
+  eventActionButtonSmallActive: {
+    backgroundColor: "#0078D4",
+    borderColor: "#0078D4",
+  },
+  eventActionTextSmall: { fontSize: 11, fontWeight: "600", color: "#64748b" },
+  eventActionTextSmallActive: { color: "#fff" },
   noEventsContainer: {
     paddingVertical: 60,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   noEventsIcon: { fontSize: 56, marginBottom: 12 },
-  noEventsText: { fontSize: 16, fontWeight: '600', color: '#0f172a', marginBottom: 6, textAlign: 'center' },
-  noEventsSubtext: { fontSize: 14, color: '#94a3b8', textAlign: 'center' },
+  noEventsText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  noEventsSubtext: { fontSize: 14, color: "#94a3b8", textAlign: "center" },
 });

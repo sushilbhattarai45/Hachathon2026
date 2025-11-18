@@ -55,6 +55,7 @@ export default function LoginScreen() {
       console.log('hahahah');
       console.log(token);
       console.log('hahahah');
+      console.log(process.env.EXPO_PUBLIC_API_URL+ '/mail/getEmail');
 
       const response = await axios.post(
         process.env.EXPO_PUBLIC_API_URL+'/mail/getEmail',
