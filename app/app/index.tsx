@@ -57,7 +57,7 @@ export default function LoginScreen() {
       console.log('hahahah');
 
       const response = await axios.post(
-        'https://keith-unvenereal-aniyah.ngrok-free.dev/mail/getEmail',
+        process.env.EXPO_PUBLIC_API_URL+'/mail/getEmail',
         {
           accessToken: token,
         }
@@ -97,8 +97,6 @@ export default function LoginScreen() {
       storeTokens(data);
       if (data.access_token) {
         getEmail(data.access_token);
-        checkLogin()
-
       }
 
         checkLogin()
@@ -115,9 +113,10 @@ export default function LoginScreen() {
     let email = await SecureStore.getItemAsync('userEmail');
 
     try{
-let response = await axios.post("https://keith-unvenereal-aniyah.ngrok-free.dev/user/login",{
-  email :'ASAS@gmai.com'
+let response = await axios.post(process.env.EXPO_PUBLIC_API_URL+"/user/login",{
+  email :'shyam@gmail.com'
 })
+console.log(response.data)
 let wasUser = response.data.wasUser
 if(wasUser === true)
 {

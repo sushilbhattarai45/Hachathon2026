@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 import "dotenv/config";
 import getTasks from "../../actions/gemini.js";
 import { userConnections } from "../../config/wsConfig.js";
-
-const processedMessages = new Set();
+import dotenv from 'dotenv';
+dotenv.config();
 
 export const subscribeMail = async (userId:any, token:any) => {
   if (!token) {
@@ -12,7 +12,7 @@ export const subscribeMail = async (userId:any, token:any) => {
   const subscriptionBody = {
     changeType: "created",
     notificationUrl:
-      "https://keith-unvenereal-aniyah.ngrok-free.dev/mail/webhook",
+      process.env.API_URL+"/mail/webhook",
     resource: "me/mailFolders('Inbox')/messages",
     expirationDateTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     clientState: "secretClientValue",
@@ -38,75 +38,139 @@ export const subscribeMail = async (userId:any, token:any) => {
     console.log(err);
   }
 };
+const processedMessages = new Set<string>();
+const mailThreads = new Map<string, any[]>(); // subscriptionId -> emails
+const tasksCalculated = new Set<string>(); // subscriptionId that already calculated tasks
+// export const webhookHandler = async (req: Request, res: Response) => {
+//   if (req.query && req.query.validationToken) {
+//     console.log("Validation request received from Graph");
+//     return res.status(200).send(req.query.validationToken);
+//   }
+//   // console.log("Notification received from Graph:", req.body);
+//   res.sendStatus(200);
+//   if (req?.body?.value) {
+//     const notifications = req.body.value;
+
+//     if (notifications && notifications.length > 0) {
+//       console.log(" New notification received");
+// let mailThread=[]
+
+//       for (const n of notifications) {
+
+//         // Extract message ID
+//         const resource = n.resource; // e.g. me/mailFolders('Inbox')/messages/AAMkAD...
+//         const messageId = resource.split("/").pop();
+
+//         if (processedMessages.has(messageId)) {
+//           console.log("⏩ Skipping duplicate notification for:");
+//           continue;
+//         }
+
+// let subscriptionid = n.subscriptionId;
+// if (userConnections.has(subscriptionid)) {
+//         const { token } = userConnections.get(subscriptionid)!;
+//         const response = await fetch(
+//           `https://graph.microsoft.com/v1.0/me/messages/${messageId}`,
+//           {
+//             headers: {
+//               Authorization: `Bearer ${token}`,
+//             },
+//           },
+//         );
+
+//         const message = await response.json();
+//         processedMessages.add(messageId);
+
+//         let emailData = {
+//           subject: message.subject,
+//           from: message.from?.emailAddress?.address,
+//           preview: message.bodyPreview,
+//         };
+// mailThread.push(emailData)
+//         //send email to repsective ws
+//         const ws = userConnections.get(subscriptionid)!.ws;
+//         ws.send(
+//           JSON.stringify({
+//             subject: message.subject,
+//             from: message.from?.emailAddress?.address,
+//             preview: message.bodyPreview,
+//           }),
+//         );
+
+//         const tasks = await getTasks(emailData);
+//         console.log("tasks", tasks);
+//         ws.send(
+//           JSON.stringify({
+//             tasks: tasks,
+//           }),
+//         );
+
+//       }
+//     }
+//     }
+//     // Here you can fetch new emails using Graph API
+//   }
+// };
 
 export const webhookHandler = async (req: Request, res: Response) => {
   if (req.query && req.query.validationToken) {
     console.log("Validation request received from Graph");
     return res.status(200).send(req.query.validationToken);
   }
-  // console.log("Notification received from Graph:", req.body);
-  res.sendStatus(200);
-  if (req?.body?.value) {
-    const notifications = req.body.value;
 
-    if (notifications && notifications.length > 0) {
-      console.log(" New notification received");
+  res.sendStatus(202); // respond immediately so Graph doesn't retry
 
-      for (const n of notifications) {
+  const notifications = req?.body?.value;
+  if (!notifications || notifications.length === 0) return;
 
-        // Extract message ID
-        const resource = n.resource; // e.g. me/mailFolders('Inbox')/messages/AAMkAD...
-        const messageId = resource.split("/").pop();
+  console.log("📥 New notifications received:", notifications.length);
 
-        if (processedMessages.has(messageId)) {
-          console.log("⏩ Skipping duplicate notification for:");
-          continue;
-        }
+  for (const n of notifications) {
+    const resource = n.resource;
+    const messageId = resource.split("/").pop();
+    const subscriptionId = n.subscriptionId;
 
-let subscriptionid = n.subscriptionId;
+    // Skip duplicate messages
+    if (processedMessages.has(messageId)) {
+      console.log("⏩ Skipping duplicate notification:", messageId);
+      continue;
+    }
 
-if (userConnections.has(subscriptionid)) {
-        const { token } = userConnections.get(subscriptionid)!;
-        const response = await fetch(
-          `https://graph.microsoft.com/v1.0/me/messages/${messageId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
+    if (!userConnections.has(subscriptionId)) continue;
+    const { token, ws } = userConnections.get(subscriptionId)!;
 
-        const message = await response.json();
-        processedMessages.add(messageId);
+    // Fetch the email message from Graph
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/me/messages/${messageId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const message = await response.json();
+    processedMessages.add(messageId);
 
-        let emailData = {
-          subject: message.subject,
-          from: message.from?.emailAddress?.address,
-          preview: message.bodyPreview,
-        };
+    const emailData = {
+      subject: message.subject,
+      from: message.from?.emailAddress?.address,
+      preview: message.bodyPreview,
+    };
 
-        //send email to repsective ws
-        const ws = userConnections.get(subscriptionid)!.ws;
-        ws.send(
-          JSON.stringify({
-            subject: message.subject,
-            from: message.from?.emailAddress?.address,
-            preview: message.bodyPreview,
-          }),
-        );
+    // Add email to the subscription's global thread
+    if (!mailThreads.has(subscriptionId)) mailThreads.set(subscriptionId, []);
+    mailThreads.get(subscriptionId)!.push(emailData);
 
-        const tasks = await getTasks(emailData);
-        console.log("tasks", tasks);
-        ws.send(
-          JSON.stringify({
-            tasks: tasks,
-          }),
-        );
+    // Send updated thread to WebSocket
+    // ws.send(JSON.stringify({ thread: mailThreads.get(subscriptionId) }));
 
+    // Calculate tasks once per subscription
+    if (!tasksCalculated.has(subscriptionId)) {
+      try{
+const tasks = await getTasks([emailData]);
+      ws.send(JSON.stringify({ tasks }));
+      }
+      catch(err)
+      {
+        console.log("error in getTasks")
       }
     }
-    }
-    // Here you can fetch new emails using Graph API
   }
 };
 
@@ -142,6 +206,25 @@ const data = await response.json();
   res.send(err)
 }
 
+}
 
+export const sendTaskToDB = async (req: Request, res: Response) => {
+const data = req.body;
+console.log(data)
+if (!data.email) {
+  return res.status(400).json({ error: "Email is required" });
+  }
+  try {
+    const user = await User.findOne({ email: data.email });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const tasks = await getTasks(data.emails);
+    console.log(tasks)
+    await user.save();
+    res.status(200).json({ message: "Tasks updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
 
 }

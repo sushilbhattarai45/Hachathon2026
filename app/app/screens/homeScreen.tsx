@@ -19,7 +19,13 @@ setAccessToken(token);
 setUserEmail(mail);
 console.log("user email", mail);
 }
-    const ws = new WebSocket('https://keith-unvenereal-aniyah.ngrok-free.dev');
+let api_url = process.env.EXPO_PUBLIC_API_URL;
+if(!api_url)
+{
+  api_url = "https://keith-unvenereal-aniyah.ngrok-free.dev"
+}
+    const ws = new WebSocket(api_url);
+
 
   useEffect(() => {
     const today = new Date();
@@ -73,7 +79,8 @@ ws.onmessage =async (event) => {
 
 await SecureStorage.setItemAsync('userId', userId);
   }
-  // alert(`New Email from ${eventData.from}: ${eventData.subject} - ${eventData.preview}`);
+alert (JSON.stringify(event.data));
+
 };
 
 };

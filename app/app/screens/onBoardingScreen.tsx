@@ -5,6 +5,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } fr
 import { router } from 'expo-router';
 import { CheckCircle2, Circle } from 'lucide-react-native';
 import axios from 'axios';
+
+import * as SecureStore from 'expo-secure-store';
 interface Category {
   id: string;
   label: string;
@@ -32,16 +34,19 @@ export default function OnBoardingScreen() {
 
   const handleContinue =async () => {
     console.log('Selected categories:', selected);
+    let email = await SecureStore.getItemAsync('userEmail');
     // Store selected categories (can be saved to AsyncStorage or passed to parent)
-    let resposne = await axios.post("https://keith-unvenereal-aniyah.ngrok-free.dev/user/updateTags",{
-      email :'ASASds@gmai.com',
+    let resposne = await axios.post(process.env.EXPO_PUBLIC_API_URL+"/user/updateTags",{
+      email :'shyamm@gmail.com',
       tags :selected
     })
 
-    console.log(resposne)
-    router.push('/screens/homeScreen');
+if (resposne.status === 200) {
+    console.log("Tags updated successfully");
+    router.push("/screens/homeScreen");
   };
 
+}
   const allSelected = selected.length > 0;
 
   const styles = StyleSheet.create({
