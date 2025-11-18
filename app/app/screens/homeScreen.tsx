@@ -11,12 +11,14 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Linking,
 } from "react-native";
 import * as SecureStorage from "expo-secure-store";
 import { router } from "expo-router";
 import axios from "axios";
 
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Toast } from "toastify-react-native";
 
 // ---------------------- NEW EVENTS DATA SCHEMA ----------------------
 type EventAction = {
@@ -46,6 +48,7 @@ type EventItem = {
   actions: EventAction[];
   entities: EventEntity;
   icon: string;
+  isactionComplete?: boolean;
 };
 
 const eventsData: Record<string, EventItem[]> = {
@@ -208,11 +211,16 @@ export default function HomeScreen() {
       },
     );
     console.log(JSON.stringify(response.data, null, 2));
-
+let tasks: Record<string, EventItem[]> = {};
     for (let i = 0; i < response.data.tasks.length; i++) {
       let task = response.data.tasks[i];
-      addEmailActionsData(task);
+      let date_str =task?.today_date?.split("T")[0];
+      tasks[date_str] = tasks[date_str] || [];
+      tasks[date_str].push(task);
+      tasks[date_str] =tasks[date_str].reverse();
     }
+
+    setEmailActionsData(tasks);
   };
 
   const randomEmojis = [
@@ -396,7 +404,6 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.navButton}>
             <Text style={styles.navText}>←</Text>
@@ -495,7 +502,7 @@ export default function HomeScreen() {
           </View>
         ) : (
           <ScrollView>
-            {mockItems.map((item, idx) => (
+            {mockItems.map((item, idx) => !item.isactionComplete &&(
               <View
                 style={{
                   borderBottomWidth: 1,
@@ -529,26 +536,33 @@ export default function HomeScreen() {
                       key={idx}
                       style={[
                         styles.eventActionButtonSmall,
-                        idx == 0  && styles.eventActionButtonSmallActive,
+                        idx == 0 && styles.eventActionButtonSmallActive,
                       ]}
                       onPress={() => {
-                        setCurrentAction(action);
-                        // Autofill payload
-                        const payload = action.action_payload || {};
-                        setCurrentPayload({
-                          title: payload.title || "",
-                          date:
-                            payload.date ||
-                            new Date().toISOString().split("T")[0], // today if missing
-                          time:
-                            payload.time ||
-                            new Date().toISOString().split("T")[1].slice(0, 5), // current time HH:MM
-                          ...payload,
-                        });
-                        setSelectedTimeZone(
-                          payload.timeZone || "America/Chicago",
-                        );
-                        setModalVisible(true);
+                        if (action.type === "link") {
+                          Linking.openURL(action.action_payload?.link || "");
+                        } else {
+                          setCurrentAction(action);
+                          // Autofill payload
+                          const payload = action.action_payload || {};
+                          setCurrentPayload({
+                            title: payload.title || "",
+                            date:
+                              payload.date ||
+                              new Date().toISOString().split("T")[0], // today if missing
+                            time:
+                              payload.time ||
+                              new Date()
+                                .toISOString()
+                                .split("T")[1]
+                                .slice(0, 5), // current time HH:MM
+                            ...payload,
+                          });
+                          setSelectedTimeZone(
+                            payload.timeZone || "America/Chicago",
+                          );
+                          setModalVisible(true);
+                        }
                       }}
                     >
                       <Text
@@ -559,7 +573,9 @@ export default function HomeScreen() {
                       >
                         {action.type === "create_task"
                           ? "Create Task"
-                          : "Create Calendar Event"}
+                          : action.type === "link"
+                            ? action?.action_payload?.title || "Link"
+                            : "Create Calendar Event"}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -936,10 +952,6 @@ export default function HomeScreen() {
 
                   console.log("Sending to Outlook API:", outlookPayload);
                   try {
-                    alert(
-                      "Sending to Outlook API:" +
-                        JSON.stringify(outlookPayload),
-                    );
                     let toke = await SecureStorage.getItemAsync("accessToken");
                     const response = await axios.post(
                       `${process.env.EXPO_PUBLIC_API_URL}/actions/createCalendarEvent`,
@@ -950,14 +962,17 @@ export default function HomeScreen() {
                       },
                     );
 
-                    alert("API Response:" + JSON.stringify(response.data));
 
-                    alert("Reminder created successfully!");
                     setModalVisible(false);
                     setCurrentPayload({});
 
-                    // Optionally refresh the tasks
-                    fetchTasks();
+                    Toast.show({
+                      text1: "Reminder created successfully!",
+                      type: "success",
+                      position: "top",
+                    });
+
+                    fetchTasks()
                   } catch (err: any) {
                     console.error(
                       "Error creating event:",
@@ -1154,7 +1169,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   eventIconContainer: {
-
     width: 44,
     height: 44,
     borderRadius: 8,
@@ -1182,7 +1196,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     marginLeft: 8,
-    marginTop: 15
+    marginTop: 15,
   },
   eventActionButtonSmall: {
     flex: 1,
@@ -1193,14 +1207,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     backgroundColor: "#f8f9fa",
-    textAlign:'center',
-
+    textAlign: "center",
   },
   eventActionButtonSmallActive: {
     backgroundColor: "#0078D4",
     borderColor: "#0078D4",
   },
-  eventActionTextSmall: { fontSize: 12, fontWeight: "600", color: "#64748b", textAlign:'center', textTransform: 'uppercase' },
+  eventActionTextSmall: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
   eventActionTextSmallActive: { color: "#fff" },
   noEventsContainer: {
     paddingVertical: 60,
