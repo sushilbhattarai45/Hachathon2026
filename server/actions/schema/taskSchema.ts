@@ -27,7 +27,7 @@ const TaskSchema = new mongoose.Schema(
 
     email_type: { type: String, default: "" },
     user_email: { type: String, default: "" },
-    icon : { type: String, default: "" },
+    iconType : { type: String, default: "" },
 
     description: { type: String, default: "" },
 

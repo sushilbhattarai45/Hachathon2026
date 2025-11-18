@@ -15,7 +15,6 @@ import axios from "axios";
 
 
 
-
 // ---------------------- NEW EVENTS DATA SCHEMA ----------------------
 type EventAction = {
   type: string;
@@ -156,6 +155,17 @@ export default function HomeScreen() {
     }
 
   }
+
+const randomEmojis = [
+   "✉️", "📨", "📬",
+  "📅", "🗓️", "⏰", "📌",
+  "⚠️", "❗", "🚨",
+ , "📝", "📋", "🔔",
+  "🔔", "📣", "📢", 
+  
+];
+
+
 
   useEffect(() => {
     const today = new Date();
@@ -393,7 +403,7 @@ export default function HomeScreen() {
     renderItem={({ item }) => (
       <View style={styles.eventItemContainer}>
         <View style={styles.eventIconContainer}>
-          <Text style={styles.eventIcon}>{item.icon}</Text>
+          <Text style={styles.eventIcon}>{randomEmojis[Math.floor(Math.random() * randomEmojis.length)]}</Text>
         </View>
         <View style={styles.eventContentContainer}>
           <Text style={styles.eventTitle}>{item.title}</Text>
