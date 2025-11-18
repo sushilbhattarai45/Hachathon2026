@@ -147,6 +147,7 @@ export const webhookHandler = async (req: Request, res: Response) => {
     );
     const message = await response.json();
     processedMessages.add(messageId);
+    console.log("Fetched message:",  JSON.stringify(message, null, 2));
 
     const emailData = {
       subject: message.subject,
@@ -163,14 +164,15 @@ export const webhookHandler = async (req: Request, res: Response) => {
     // ws.send(JSON.stringify({ thread: mailThreads.get(subscriptionId) }));
 
     // Calculate tasks once per subscription
-    if (!tasksCalculated.has(subscriptionId)) {
+    if (!tasksCalculated.has(messageId)) {
       try{
-const tasks = await getTasks([emailData]);
+
+const tasks = await getTasks(message);
       // console.log(tasks.output, emailData)
       let res = await sendTaskToDB(tasks?.output,emailData)
       // console.log("res", res)
        ws.send( JSON.stringify(res));
-    tasksCalculated.add(subscriptionId);
+    tasksCalculated.add(messageId);
 
 
       }
