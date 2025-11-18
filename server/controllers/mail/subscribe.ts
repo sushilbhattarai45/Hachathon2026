@@ -125,8 +125,10 @@ export const webhookHandler = async (req: Request, res: Response) => {
   if (!notifications || notifications.length === 0) return;
 
   console.log("📥 New notifications received:", notifications.length);
-
+let count = 0
   for (const n of notifications) {
+  if(count<1)
+  {  
     const resource = n.resource;
     const messageId = resource.split("/").pop();
     const subscriptionId = n.subscriptionId;
@@ -169,10 +171,20 @@ export const webhookHandler = async (req: Request, res: Response) => {
 
 const tasks = await getTasks(message);
       // console.log(tasks.output, emailData)
+    
+console.log("tasks", tasks.output)
+if (tasks?.output ?.title!= null || tasks?.output.title!="")
+{
       let res = await sendTaskToDB(tasks?.output,emailData)
       // console.log("res", res)
-       ws.send( JSON.stringify(res));
-    tasksCalculated.add(messageId);
+      if(res != null)
+      {
+       ws.send(JSON.stringify(res));
+      }
+          tasksCalculated.add(messageId);
+
+    }
+    
 
 
       }
@@ -183,6 +195,7 @@ const tasks = await getTasks(message);
     }
   }
 };
+}
 
 
 export const getEmail = async (req: Request, res: Response) => 
@@ -223,6 +236,13 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
   console.log("HAHAHH")
   console.log(data?.description)
   try {
+
+  if(data?.title=="" || data?.description=="")
+  {
+    return null
+
+  }
+  else{
   //  console.log({ 
   //      message_id: emailData.subject,
   //     title: emailData?.subject,
@@ -250,7 +270,7 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
     // const saved = await taskSchema.findOne({ message_id: emailData.subject });
     console.log(" Task saved to DB:",response);
     return response;
-
+  }
   } catch (error) {
     console.error("Error saving task:", error);
     throw error;

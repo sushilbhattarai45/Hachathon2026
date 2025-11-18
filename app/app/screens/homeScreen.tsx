@@ -437,10 +437,10 @@ let tasks: Record<string, EventItem[]> = {};
               <TouchableOpacity
                 key={idx}
                 onPress={async () => {
-                  alert("logour");
-                  await SecureStorage.deleteItemAsync("accessToken");
-                  await SecureStorage.deleteItemAsync("refreshToken");
-                  router.push("/");
+                  // alert("logour");
+                  // await SecureStorage.deleteItemAsync("accessToken");
+                  // await SecureStorage.deleteItemAsync("refreshToken");
+                  // router.push("/");
                   setSelectedDate(date);
                   scrollToDate(date);
                 }}
@@ -562,6 +562,7 @@ let tasks: Record<string, EventItem[]> = {};
                             payload.timeZone || "America/Chicago",
                           );
                           setModalVisible(true);
+                          setSelectedMessageId(item.message_id);
                         }
                       }}
                     >
@@ -585,7 +586,6 @@ let tasks: Record<string, EventItem[]> = {};
           </ScrollView>
         )}
       </View>
-      // Replace your Modal component with this updated version:
       <Modal visible={modalVisible} transparent animationType="slide">
         <View
           style={{
@@ -961,6 +961,19 @@ let tasks: Record<string, EventItem[]> = {};
                         type: currentAction?.type,
                       },
                     );
+
+                   if (response?.status === 200)
+                   {
+                    let update = await axios.post(
+                      `${process.env.EXPO_PUBLIC_API_URL}/actions/updateTask`,
+                      {
+                      taskid:selectedMessageId
+                      },
+
+                    );
+                    alert("UPDATE RESPONSE:"+ JSON.stringify(update.data));
+
+                   }
 
 
                     setModalVisible(false);

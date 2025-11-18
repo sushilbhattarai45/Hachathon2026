@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 const app = express();
 import dotenv from 'dotenv';
 dotenv.config();
-const PORT = 7000;
+const PORT = 6000;
 import UserRouter from './routers/userRouter.js';
 let connectDb = async()=>{
     await mongoose.connect('mongodb+srv://root:root@maincluster.lhwinaa.mongodb.net/?appName=maincluster').then(
