@@ -7,7 +7,11 @@ const jsonSchema = {
       "type": "string",
       "description": "Short title that fits 1–2 lines on mobile."
     },
-    messageId: {
+    "today_date": {
+      "type": "string",
+      "description": "Today's date in ISO format"
+      },
+    "messageId": {
       type: "string",
       description: "The message ID of the email"
       },
