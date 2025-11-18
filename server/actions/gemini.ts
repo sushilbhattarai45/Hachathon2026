@@ -262,7 +262,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 export default async function getTasks(emailInfo: any) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       contents: `
       EMAIL CONTENT START
             ${JSON.stringify(emailInfo)}

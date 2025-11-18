@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
+  Modal,
+  TextInput,
+  Button,
   Text,
   Dimensions,
   StyleSheet,
@@ -13,6 +16,7 @@ import * as SecureStorage from "expo-secure-store";
 import { router } from "expo-router";
 import axios from "axios";
 
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 
 // ---------------------- NEW EVENTS DATA SCHEMA ----------------------
@@ -128,8 +132,22 @@ export default function HomeScreen() {
   const SCREEN_WIDTH = Dimensions.get("window").width;
 
   const [emailActionsData, setEmailActionsData] = useState<Record<string,EventItem[]>>(eventsData);
-
-
+const [selectedAction, setSelectedAction] = useState<EventAction | null>(null);
+const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+const [showActionModal, setShowActionModal] = useState(false);
+const [modalVisible, setModalVisible] = useState(false);
+const [currentAction, setCurrentAction] = useState<EventAction | null>(null);
+const [currentPayload, setCurrentPayload] = useState<Record<string, any>>({});
+const [selectedTimeZone, setSelectedTimeZone] = useState("America/Chicago");
+const [dateValue, setDateValue] = useState(new Date());
+const [timeValue, setTimeValue] = useState(new Date());
+const [showDatePicker, setShowDatePicker] = useState(false);
+const [showTimePicker, setShowTimePicker] = useState(false);
+// Date/Time pickers for END date and time
+const [endDateValue, setEndDateValue] = useState(new Date());
+const [endTimeValue, setEndTimeValue] = useState(new Date(Date.now() + 60 * 60 * 1000)); // 1 hour later
+const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   let getEmailandConnect = async () => {
     let mail = await SecureStorage.getItemAsync("userEmail");
     let token = await SecureStorage.getItemAsync("accessToken");
@@ -284,6 +302,38 @@ const randomEmojis = [
       animated: true,
     });
   };
+const handleActionSubmit = async () => {
+  if (!selectedAction) return;
+
+  try {
+    const token = await SecureStorage.getItemAsync("accessToken");
+    const userId = await SecureStorage.getItemAsync("userId");
+
+    const response = await axios.post(
+      `${process.env.EXPO_PUBLIC_API_URL}/mail/action/perform`,
+      {
+        userId,
+        action_type: selectedAction.type,
+        message_id: selectedMessageId,
+        action_payload: selectedAction.action_payload,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("ACTION RESPONSE:", response.data);
+
+    alert("Action executed successfully!");
+
+    setShowActionModal(false);
+  } catch (err) {
+    console.log("Action error:", err);
+    alert("Failed to execute action");
+  }
+};
 
 
   const isToday = (date: Date) =>
@@ -418,23 +468,38 @@ const randomEmojis = [
                   </View>
                   <View style={styles.eventActionsRow}>
                     {item.actions.map((action, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        style={[
-                          styles.eventActionButtonSmall,
-                          styles.eventActionButtonSmallActive,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.eventActionTextSmall,
-                            styles.eventActionTextSmallActive,
-                          ]}
-                        >
-                          {action.type}
-                        </Text>
-                      </TouchableOpacity>
+                  <TouchableOpacity
+  key={idx}
+  style={[
+    styles.eventActionButtonSmall,
+    styles.eventActionButtonSmallActive,
+  ]}
+  onPress={() => {
+    setCurrentAction(action);
+    // Autofill payload
+    const payload = action.action_payload || {};
+    setCurrentPayload({
+      title: payload.title || "",
+      date: payload.date || new Date().toISOString().split("T")[0], // today if missing
+      time: payload.time || new Date().toISOString().split("T")[1].slice(0,5), // current time HH:MM
+      ...payload,
+    });
+    setSelectedTimeZone(payload.timeZone || "America/Chicago");
+    setModalVisible(true);
+  }}
+>
+  <Text
+    style={[
+      styles.eventActionTextSmall,
+      styles.eventActionTextSmallActive,
+    ]}
+  >
+    {action.type}
+  </Text>
+</TouchableOpacity>
+
                     ))}
+                    
                   </View>
                 </View>
               ))
@@ -446,11 +511,358 @@ const randomEmojis = [
 )}
 
       </View>
+
+// Replace your Modal component with this updated version:
+
+<Modal visible={modalVisible} transparent animationType="slide">
+  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#00000066" }}>
+    <View style={{ width: "90%", backgroundColor: "#fff", padding: 16, borderRadius: 12 }}>
+      <Text style={{ fontWeight: "600", fontSize: 18, marginBottom: 12 }}>
+        {currentAction?.type === "create_task" ? "Create Task" : "Create Calendar Event"}
+      </Text>
+
+      {/* Title */}
+      <TextInput
+        placeholder="Title"
+        value={currentPayload.title || ""}
+        onChangeText={(text) => setCurrentPayload({ ...currentPayload, title: text })}
+        style={{ borderBottomWidth: 1, borderBottomColor: "#ccc", marginBottom: 12, paddingVertical: 6 }}
+      />
+
+      {/* Date Picker */}
+      <TouchableOpacity
+        onPress={() => setShowDatePicker(true)}
+        style={{ padding: 12, borderWidth: 1, borderColor: "#ccc", borderRadius: 6, marginBottom: 12 }}
+      >
+        <Text>{dateValue.toDateString()}</Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={dateValue}
+          mode="date"
+          display="calendar"
+          onChange={(event, selectedDate) => {
+            setShowDatePicker(false);
+            if (selectedDate) {
+              setDateValue(selectedDate);
+              // Update payload immediately
+              setCurrentPayload(prev => ({
+                ...prev,
+                date: selectedDate.toISOString().split("T")[0]
+              }));
+            }
+          }}
+        />
+      )}
+
+      {/* Time Picker */}
+      <TouchableOpacity
+        onPress={() => setShowTimePicker(true)}
+        style={{ padding: 12, borderWidth: 1, borderColor: "#ccc", borderRadius: 6, marginBottom: 12 }}
+      >
+        <Text>{timeValue.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
+      </TouchableOpacity>
+      {showTimePicker && (
+        <DateTimePicker
+          value={timeValue}
+          mode="time"
+          display="spinner"
+          onChange={(event, selectedTime) => {
+            setShowTimePicker(false);
+            if (selectedTime) {
+              setTimeValue(selectedTime);
+              // Update payload immediately
+              const hours = selectedTime.getHours().toString().padStart(2, '0');
+              const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+              setCurrentPayload(prev => ({
+                ...prev,
+                time: `${hours}:${minutes}`
+              }));
+            }
+          }}
+        />
+      )}
+
+      {/* End Date Section Header */}
+      <Text style={{ fontWeight: "600", fontSize: 14, marginTop: 8, marginBottom: 8, color: "#334155" }}>
+        End Date & Time
+      </Text>
+
+      {/* End Date Picker */}
+      <TouchableOpacity
+        onPress={() => setShowEndDatePicker(true)}
+        style={{ padding: 12, borderWidth: 1, borderColor: "#ccc", borderRadius: 6, marginBottom: 12 }}
+      >
+        <Text>{endDateValue.toDateString()}</Text>
+      </TouchableOpacity>
+      {showEndDatePicker && (
+        <DateTimePicker
+          value={endDateValue}
+          mode="date"
+          display="calendar"
+          onChange={(event, selectedDate) => {
+            setShowEndDatePicker(false);
+            if (selectedDate) {
+              setEndDateValue(selectedDate);
+              // Update payload immediately
+              setCurrentPayload(prev => ({
+                ...prev,
+                endDate: selectedDate.toISOString().split("T")[0]
+              }));
+            }
+          }}
+        />
+      )}
+
+      {/* End Time Picker */}
+      <TouchableOpacity
+        onPress={() => setShowEndTimePicker(true)}
+        style={{ padding: 12, borderWidth: 1, borderColor: "#ccc", borderRadius: 6, marginBottom: 12 }}
+      >
+        <Text>{endTimeValue.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
+      </TouchableOpacity>
+      {showEndTimePicker && (
+        <DateTimePicker
+          value={endTimeValue}
+          mode="time"
+          display="spinner"
+          onChange={(event, selectedTime) => {
+            setShowEndTimePicker(false);
+            if (selectedTime) {
+              setEndTimeValue(selectedTime);
+              // Update payload immediately
+              const hours = selectedTime.getHours().toString().padStart(2, '0');
+              const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+              setCurrentPayload(prev => ({
+                ...prev,
+                endTime: `${hours}:${minutes}`
+              }));
+            }
+          }}
+        />
+      )}
+
+      {/* Timezone Selection */}
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ fontWeight: "600", marginBottom: 6 }}>Timezone:</Text>
+        <TouchableOpacity
+          style={{ padding: 12, borderWidth: 1, borderColor: "#ccc", borderRadius: 6 }}
+          onPress={() => {
+            // You can implement a picker here or use a dropdown library
+            // For now, just showing the selected timezone
+          }}
+        >
+          <Text>{selectedTimeZone}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* JSON Preview */}
+      <Text style={{ fontWeight: "600", marginBottom: 6 }}>Payload Preview:</Text>
+      <ScrollView style={{ maxHeight: 120, borderWidth: 1, borderColor: "#eee", borderRadius: 6, padding: 8, backgroundColor: "#fafafa" }}>
+        <Text style={{ fontSize: 11, fontFamily: 'monospace' }}>
+          {JSON.stringify({
+            subject: currentPayload?.title || currentPayload?.body?.content || "Event",
+            start: {
+              dateTime: `${dateValue.toISOString().split("T")[0]}T${timeValue.getHours().toString().padStart(2, '0')}:${timeValue.getMinutes().toString().padStart(2, '0')}:00`,
+              timeZone: selectedTimeZone
+            },
+            end: {
+              dateTime: `${endDateValue.toISOString().split("T")[0]}T${endTimeValue.getHours().toString().padStart(2, '0')}:${endTimeValue.getMinutes().toString().padStart(2, '0')}:00`,
+              timeZone: selectedTimeZone
+            },
+            body: {
+              contentType: "Text",
+              content: currentPayload.title || ""
+            }
+          }, null, 2)}
+        </Text>
+      </ScrollView>
+
+      {/* Buttons */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 16 }}>
+        <Button 
+          title="Cancel" 
+          onPress={() => {
+            setModalVisible(false);
+            setCurrentPayload({});
+          }} 
+        />
+        <Button
+          title="Confirm"
+          onPress={async () => {
+            // Validate inputs
+            if (!currentPayload.title || currentPayload.title.trim() === "") {
+              alert("Please enter a title");
+              return;
+            }
+
+            // Create start datetime by combining date and time
+            const startDateTime = new Date(
+              dateValue.getFullYear(),
+              dateValue.getMonth(),
+              dateValue.getDate(),
+              timeValue.getHours(),
+              timeValue.getMinutes(),
+              0
+            );
+
+            // Create end datetime using selected end date and time
+            const endDateTime = new Date(
+              endDateValue.getFullYear(),
+              endDateValue.getMonth(),
+              endDateValue.getDate(),
+              endTimeValue.getHours(),
+              endTimeValue.getMinutes(),
+              0
+            );
+
+            // Validate that end time is after start time
+            if (endDateTime <= startDateTime) {
+              alert("End date/time must be after start date/time");
+              return;
+            }
+
+            // Format for Outlook API
+            const formatDateTimeForOutlook = (date: Date) => {
+              const year = date.getFullYear();
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const day = date.getDate().toString().padStart(2, '0');
+              const hours = date.getHours().toString().padStart(2, '0');
+              const minutes = date.getMinutes().toString().padStart(2, '0');
+              const seconds = date.getSeconds().toString().padStart(2, '0');
+              
+              return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+            };
+
+            // Build Outlook-compatible payload
+            const outlookPayload = {
+              subject: currentPayload?.title || currentPayload?.body?.content || "Event",
+              start: {
+                dateTime: `${dateValue.toISOString().split("T")[0]}T${timeValue.getHours().toString().padStart(2, '0')}:${timeValue.getMinutes().toString().padStart(2, '0')}:00`,
+                timeZone: 'America/Chicago'
+              },
+              end: {
+                dateTime: `${endDateValue.toISOString().split("T")[0]}T${timeValue.getHours().toString().padStart(2, '0')}:${timeValue.getMinutes().toString().padStart(2, '0')}:00`,
+                timeZone: 'America/Chicago'
+              },
+              body: {
+                contentType: "Text",
+                content: currentPayload.title || currentPayload.body.content || ""
+              },
+              // Add any additional fields from currentAction if needed
+              ...currentAction?.action_payload
+            };
+
+            console.log("Sending to Outlook API:", outlookPayload);
+
+            try {
+              alert("Sending to Outlook API:" + JSON.stringify(outlookPayload));
+              // let toke = await SecureStorage.getItemAsync("accessToken");
+              // const response = await axios.post(
+              //   `${process.env.EXPO_PUBLIC_API_URL}/actions/createCalendarEvent`,
+              //   {outlookPayload,
+              //     token: toke
+              // },
+               
+              // );
+              
+              // alert("API Response:"+ JSON.stringify(response.data));
+              // alert("Created successfully!");
+              // setModalVisible(false);
+              // setCurrentPayload({});
+              
+              // Optionally refresh the tasks
+              fetchTasks();
+            } catch (err: any) {
+              console.error("Error creating event:", err.response?.data || err.message);
+              alert(`Failed to create: ${err.response?.data?.error || err.message}`);
+            }
+          }}
+        />
+      </View>
+    </View>
+  </View>
+</Modal>
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  backgroundColor: "rgba(0,0,0,0.25)",
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 20,
+},
+
+modalContainer: {
+  backgroundColor: "#fff",
+  width: "100%",
+  padding: 20,
+  borderRadius: 12,
+  elevation: 10,
+},
+
+modalTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  marginBottom: 10,
+  color: "#0f172a",
+},
+
+modalLabel: {
+  fontSize: 13,
+  fontWeight: "600",
+  color: "#334155",
+  marginBottom: 4,
+},
+
+modalJson: {
+  backgroundColor: "#f1f5f9",
+  padding: 10,
+  borderRadius: 8,
+  fontSize: 12,
+  color: "#334155",
+  fontWeight: "500",
+},
+
+modalButtonRow: {
+  marginTop: 20,
+  flexDirection: "row",
+  justifyContent: "space-between",
+},
+
+modalCancelButton: {
+  paddingVertical: 10,
+  paddingHorizontal: 20,
+  borderWidth: 1,
+  borderColor: "#94a3b8",
+  borderRadius: 8,
+},
+
+modalCancelButtonText: {
+  color: "#475569",
+  fontWeight: "600",
+},
+
+modalOkButton: {
+  paddingVertical: 10,
+  paddingHorizontal: 20,
+  backgroundColor: "#0078D4",
+  borderRadius: 8,
+},
+
+modalOkButtonText: {
+  color: "#fff",
+  fontWeight: "700",
+},
+
   safe: { flex: 1, backgroundColor: "#fff" },
   container: { backgroundColor: "#fff" },
   header: {

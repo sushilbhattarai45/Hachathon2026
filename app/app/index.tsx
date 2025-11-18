@@ -42,7 +42,10 @@ export default function LoginScreen() {
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
-      scopes: ['openid', 'profile', 'email', 'offline_access'],
+      scopes: ['openid', 'profile', 'email', 'offline_access',
+'calendars.readwrite',
+
+      ],
       redirectUri,
     },
     discovery
