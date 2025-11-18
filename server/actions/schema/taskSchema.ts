@@ -19,7 +19,7 @@ const EntitiesSchema = new mongoose.Schema({
 
 const TaskSchema = new mongoose.Schema(
   {
-    message_id: { type: String, required: true },
+    message_id: { type: String },
 
     today_date: { type:Date, default: new Date() },
 

@@ -227,19 +227,19 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
 
 
    const response = await new taskSchema({
-      message_id: emailData.subject,
-      title: emailData.subject,
+      message_id:data?.message_id,
+      title: emailData?.subject,
       email_type: "email",
       user_email: emailData.to[0],
       description: emailData.preview,
       show: true,
-      actions: data.actions,
-      entities: data.entities
+      actions: data?.actions,
+      entities: data?.entities
     }).save();
     
-    const saved = await taskSchema.findOne({ message_id: emailData.subject });
-    console.log("✅ Task saved to DB:",saved);
-    return saved;
+    // const saved = await taskSchema.findOne({ message_id: emailData.subject });
+    console.log("✅ Task saved to DB:",response);
+    return response;
 
   } catch (error) {
     console.error("❌ Error saving task:", error);
