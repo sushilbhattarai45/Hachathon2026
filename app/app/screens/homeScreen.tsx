@@ -143,10 +143,15 @@ export default function HomeScreen() {
 
   const fetchTasks = async () => {
     let mail = await SecureStorage.getItemAsync("userEmail")
+    console.log(mail?.split('@')[0]+'@outlook.com');
     mail = mail?.split('@')[1] == 'gmail.com'? mail?.split('@')[0]+'@outlook.com' : mail
+
+    if(mail == 'lamsalsskr@outlook.com') mail = 'lamsalsanskar@outlook.com'
+
     let response = await axios.post(process.env.EXPO_PUBLIC_API_URL+"/mail/tasks/getTasksForUser",{
       user_email: mail
     })
+    console.log(JSON.stringify(response.data, null, 2));
 
     for(let i=0;i<response.data.tasks.length;i++)
     {
@@ -398,45 +403,44 @@ const randomEmojis = [
     </Text>
   </View>
 ) : (
-  <FlatList
-    data={mockItems}
-    renderItem={({ item }) => (
-      <View style={styles.eventItemContainer}>
-        <View style={styles.eventIconContainer}>
-          <Text style={styles.eventIcon}>{randomEmojis[Math.floor(Math.random() * randomEmojis.length)]}</Text>
-        </View>
-        <View style={styles.eventContentContainer}>
-          <Text style={styles.eventTitle}>{item.title}</Text>
-          <Text style={styles.eventTime}>{item.entities.time}</Text>
-          <Text style={styles.eventNotes}>{item.description}</Text>
-        </View>
-        <View style={styles.eventActionsRow}>
-          {item.actions.map((action, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[
-                styles.eventActionButtonSmall,
-                action.type === "submit" && styles.eventActionButtonSmallActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.eventActionTextSmall,
-                  action.type === "submit" && styles.eventActionTextSmallActive,
-                ]}
-              >
-                {action.type.charAt(0).toUpperCase() + action.type.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    )}
-    keyExtractor={(item) => item.message_id}
-    contentContainerStyle={styles.eventsListContent}
-    scrollEnabled={true}
-    nestedScrollEnabled={true}
-  />
+            {
+
+              mockItems.map((item, idx) => (
+                <View style={styles.eventItemContainer} key={idx}>
+                  <View style={styles.eventIconContainer}>
+                    <Text style={styles.eventIcon}>{randomEmojis[Math.floor(Math.random() * randomEmojis.length)]}</Text>
+                    <Text style={styles.eventIcon}>{item.icon}</Text>
+                  </View>
+                  <View style={styles.eventContentContainer}>
+                    <Text style={styles.eventTitle}>{item.title}</Text>
+                    <Text style={styles.eventTime}>{item.entities.time}</Text>
+                    <Text style={styles.eventNotes}>{item.description}</Text>
+                  </View>
+                  <View style={styles.eventActionsRow}>
+                    {item.actions.map((action, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[
+                          styles.eventActionButtonSmall,
+                          styles.eventActionButtonSmallActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.eventActionTextSmall,
+                            styles.eventActionTextSmallActive,
+                          ]}
+                        >
+                          {action.type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ))
+            }
+
+
 )}
 
       </View>
