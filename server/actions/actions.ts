@@ -43,11 +43,6 @@ interface MeetingDetails {
 /**
  * Interface for specifying Due/Reminder details for a Task
  */
-interface TaskReminderDetails {
-  dueDateTime?: DateTimeTimeZone;
-  isReminderOn?: boolean;
-  reminderDateTime?: DateTimeTimeZone;
-}
 
 // ----------------------------------------------------------------------
 // --- Core API Helper Function ---
@@ -197,16 +192,39 @@ export async function getOrCreateTaskList(listName: string, accessToken:string):
  */
 export async function addTaskOrReminder(
   title: string,
-  reminderDetails: TaskReminderDetails = {},
+  reminderDetails: any = {},
   accessToken: string,
   listName: string = "Jotly",
 ): Promise<any> {
+
+  if(reminderDetails.dueDateTime)
+  {
+    reminderDetails.dueDateTime.timeZone = "America/Chicago"
+    if(!reminderDetails.dateTime.includes("T"))
+    {
+      reminderDetails.dateTime = reminderDetails.dateTime+"T23:59:59"
+    }
+  }
+ 
+let payload ={
+  title: title,
+  dueDate :reminderDetails.dueDateTime,
+  isReminderOn: true,
+  reminderDate :reminderDetails?.end?.dateTime,
+}
+let dueDate = reminderDetails.dueDateTime
+
+console.log(reminderDetails)
+
+  console.log("heyyyyyyyyyyyyyyyyyyyyyyyyyyy")
   const listId = await getOrCreateTaskList(listName, accessToken);
   console.log(`Adding task "${title}" to list ID: ${listId}`);
 
   const body = {
     title: title,
-    ...reminderDetails,
+    dueDate,
+    isReminderOn: true,
+    important: true,
   };
 
   return await callGraphApi(`/todo/lists/${listId}/tasks`, "POST", body, accessToken);

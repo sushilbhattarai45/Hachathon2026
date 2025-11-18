@@ -1,4 +1,4 @@
-import { addPersonalCalendarEvent } from "../actions/actions.js";
+import { addPersonalCalendarEvent,addTaskOrReminder } from "../actions/actions.js";
 import express from "express";
 
 const ActionsRouter = express.Router();
@@ -35,11 +35,28 @@ return res.status(400).json({ error: "Missing required fields (subject, body, st
  console.log(eventDetails)
 // 2. Remove the token from the event details object
 // This ensures only valid MeetingDetails fields are passed to the API call.
-// delete eventDetails.reminderDetails
-// delete eventDetails.listName
-// delete eventDetails.title
-// console.log(eventDetails)
+delete eventDetails.type;
+delete eventDetails.token;
+console.log(req.body.type)
+if(req.body.type=="create_task")
+{
+  delete eventDetails.body
+  delete eventDetails.start
+  delete eventDetails.end
+  delete eventDetails.attendees
 
+  console.log("hiiiii")
+  console.log(accessToken)
+//   const result = await addTaskOrReminder(eventDetails.title,eventDetails, accessToken);
+  res.status(200).json({
+    message: "Task successfully created.",
+    // event: result,
+  });
+}
+else
+{
+   
+    
  try {
  const result = await addPersonalCalendarEvent(eventDetails, accessToken);
  res.status(200).json({
@@ -53,6 +70,9 @@ res.status(500).json({
       details: error instanceof Error ? error.message : "An unknown error occurred.",
     });
   }
+}
+
+
 });
 
 export default ActionsRouter;
