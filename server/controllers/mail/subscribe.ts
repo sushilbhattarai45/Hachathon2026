@@ -254,10 +254,3 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
     throw error;
   }
 };
-
-
-const createEventInOutlook = async (data:any, emailData:any) => {
-  
-
-
-}
