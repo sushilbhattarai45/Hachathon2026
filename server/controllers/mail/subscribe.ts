@@ -151,7 +151,7 @@ export const webhookHandler = async (req: Request, res: Response) => {
     const emailData = {
       subject: message.subject,
       from: message.from?.emailAddress?.address,
-      to : message.toRecipients.map((r:any)=>r.emailAddress.address),
+      to : message?.toRecipients?.map((r:any)=>r.emailAddress.address),
       preview: message.bodyPreview,
     };
 
@@ -166,9 +166,11 @@ export const webhookHandler = async (req: Request, res: Response) => {
     if (!tasksCalculated.has(subscriptionId)) {
       try{
 const tasks = await getTasks([emailData]);
-      ws.send(JSON.stringify({ tasks }));
       console.log(tasks.output, emailData)
-      sendTaskToDB(tasks.output,emailData)
+      let res = await sendTaskToDB(tasks.output,emailData)
+      console.log("res", res)
+       ws.send(JSON.stringify(res));
+
 
       }
       catch(err)
@@ -217,13 +219,13 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
   try {
    console.log({ 
        message_id: emailData.subject,
-      title: emailData.subject,
+      title: emailData?.subject,
       email_type: "email",
-      user_email: emailData.to[0],
-      description: emailData.preview,
+      user_email: emailData?.to[0],
+      description: emailData?.preview,
       show: true,
-      actions: data.actions,
-      entities: data.entities})
+      actions: data?.actions,
+      entities: data?.entities})
 
 
    const response = await new taskSchema({
@@ -234,15 +236,16 @@ export const sendTaskToDB = async (data:any, emailData:any) => {
       description: emailData.preview,
       show: true,
       actions: data?.actions,
+      icon : data?.icon,
       entities: data?.entities
     }).save();
     
     // const saved = await taskSchema.findOne({ message_id: emailData.subject });
-    console.log("✅ Task saved to DB:",response);
+    console.log(" Task saved to DB:",response);
     return response;
 
   } catch (error) {
-    console.error("❌ Error saving task:", error);
+    console.error("Error saving task:", error);
     throw error;
   }
 };

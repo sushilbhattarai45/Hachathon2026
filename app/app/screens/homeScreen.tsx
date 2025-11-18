@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import * as SecureStorage from "expo-secure-store";
 import { router } from "expo-router";
+import axios from "axios";
 
 
 
@@ -141,6 +142,21 @@ export default function HomeScreen() {
   let api_url = process.env.EXPO_PUBLIC_API_URL ?? "";
   const ws = new WebSocket(api_url);
 
+  const fetchTasks = async () => {
+    let mail = await SecureStorage.getItemAsync("userEmail")
+    mail = mail?.split('@')[1] == 'gmail.com'? mail?.split('@')[0]+'@outlook.com' : mail
+    let response = await axios.post(process.env.EXPO_PUBLIC_API_URL+"/mail/tasks/getTasksForUser",{
+      user_email: mail
+    })
+
+    for(let i=0;i<response.data.tasks.length;i++)
+    {
+      let task = response.data.tasks[i]
+      addEmailActionsData(task)
+    }
+
+  }
+
   useEffect(() => {
     const today = new Date();
     const newDates = [];
@@ -151,6 +167,7 @@ export default function HomeScreen() {
     }
     setDates(newDates);
     getEmailandConnect();
+    fetchTasks();
   }, []);
 
   let getTokens = async () => {
@@ -165,10 +182,11 @@ export default function HomeScreen() {
   const addEmailActionsData = (data:EventItem) => {
     setEmailActionsData((prev)=> {
       let temp = {...prev};
-      let date = new Date(data.today_date);
-      let date_str = date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
-      temp[data.today_date] = [...(prev[data.today_date] || []), data];
-      return temp;
+      let date_str = data?.today_date?.split('T')[0];
+      temp[date_str] = prev[date_str] || [];
+      temp[date_str].push(data);
+       temp[date_str] = temp[date_str].reverse();
+       return temp;
     })
   }
 
@@ -207,10 +225,10 @@ export default function HomeScreen() {
 
         await SecureStorage.setItemAsync("userId", userId);
       }
-      alert(JSON.stringify(event.data, null, 2));
+      // alert(JSON.stringify(event.data, null, 2));
 
         let data:EventItem = JSON.parse(event.data);
-        if(data.show) {
+        if(data?.today_date) {
           addEmailActionsData(data);
         }
     };
@@ -306,10 +324,10 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={idx}
                 onPress={async () => {
-                  alert("logour");
-                  await SecureStorage.deleteItemAsync("accessToken");
-                  await SecureStorage.deleteItemAsync("refreshToken");
-                  router.push("/");
+                  // alert("logour");
+                  // await SecureStorage.deleteItemAsync("accessToken");
+                  // await SecureStorage.deleteItemAsync("refreshToken");
+                  // router.push("/");
                   setSelectedDate(date);
                   scrollToDate(date);
                 }}

@@ -11,6 +11,10 @@ const jsonSchema = {
       "type": "string",
       "description": "Today's date in ISO format"
       },
+      "icon":{
+type: "string",
+description: "Emoji that represents the content of the email correctly"
+      },
     "messageId": {
       type: "string",
       description: "The message ID of the email"
