@@ -754,22 +754,24 @@ const handleActionSubmit = async () => {
             };
 
             console.log("Sending to Outlook API:", outlookPayload);
-
             try {
               alert("Sending to Outlook API:" + JSON.stringify(outlookPayload));
-              // let toke = await SecureStorage.getItemAsync("accessToken");
-              // const response = await axios.post(
-              //   `${process.env.EXPO_PUBLIC_API_URL}/actions/createCalendarEvent`,
-              //   {outlookPayload,
-              //     token: toke
-              // },
+              let toke = await SecureStorage.getItemAsync("accessToken");
+              const response = await axios.post(
+                `${process.env.EXPO_PUBLIC_API_URL}/actions/createCalendarEvent`,
+                {outlookPayload,
+                  token: toke,
+                  type: currentAction?.type
+              },
                
-              // );
+              );
               
-              // alert("API Response:"+ JSON.stringify(response.data));
-              // alert("Created successfully!");
-              // setModalVisible(false);
-              // setCurrentPayload({});
+              alert("API Response:"+ JSON.stringify(response.data));
+
+              
+              alert("Reminder created successfully!");
+              setModalVisible(false);
+              setCurrentPayload({});
               
               // Optionally refresh the tasks
               fetchTasks();
